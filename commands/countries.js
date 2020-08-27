@@ -53,10 +53,21 @@ module.exports = {
           return message.channel.send('You should specify country flag. To see them all use !flags command');
         }
 
-        Player.find({ flag }).then((players) => {
-          let out = players.filter((p) => members.has(p.discordId)).map((p) => `<@${p.discordId}>`).join('\n');
-          out = `${flag}\n${out}`;
-          sendWithoutPing(message.channel, out);
+        Player.find({ flag }).then(async (players) => {
+          players = players.filter((p) => members.has(p.discordId)).map((p) => `<@${p.discordId}>`);
+
+          let out = `${flag}`;
+          for (const player of players) {
+            if (`${out}\n${player}`.length < 2000) {
+              out = `${out}\n${player}`;
+            } else {
+              await sendWithoutPing(message.channel, out);
+              out = `${player}`;
+            }
+          }
+          if (out) {
+            await sendWithoutPing(message.channel, out);
+          }
         });
       }
     });

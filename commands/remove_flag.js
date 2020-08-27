@@ -18,7 +18,8 @@ module.exports = {
     } else if (args.length > 0) {
       return message.channel.send('Nope.');
     } else {
-      discordId = message.author.id;
+      return message.channel.send('Nope.');
+      // discordId = message.author.id;
     }
 
     Player.findOne({ discordId }).then((doc) => {

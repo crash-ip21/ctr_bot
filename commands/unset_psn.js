@@ -55,11 +55,7 @@ module.exports = {
       promise.then(() => {
         message.channel.send('PSN has been unset.');
 
-        let rankedStaff = '@Ranked Staff';
-        const rankedStaffRole = message.guild.roles.cache.find((r) => r.name === 'Ranked Staff');
-        if (rankedStaffRole) rankedStaff = rankedStaffRole.toString();
-        sendLogMessage(message.guild, `${rankedStaff}
-${message.author} unset their PSN.
+        sendLogMessage(message.guild, `${message.author} unset their PSN.
 Old: \`${oldPSN}\``);
       });
     });

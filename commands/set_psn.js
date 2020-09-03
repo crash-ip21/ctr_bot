@@ -63,11 +63,7 @@ module.exports = {
 
             if (oldPSN) {
               try {
-                let rankedStaff = '@Ranked Staff';
-                const rankedStaffRole = message.guild.roles.cache.find((r) => r.name === 'Ranked Staff');
-                if (rankedStaffRole) rankedStaff = rankedStaffRole.toString();
-                sendLogMessage(message.guild, `${rankedStaff}
-${member} changed their PSN.
+                sendLogMessage(message.guild, `${member} changed their PSN.
 Old: \`${oldPSN}\`
 New: \`${PSN}\``);
               } catch (e) {

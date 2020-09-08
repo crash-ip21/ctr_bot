@@ -1,5 +1,3 @@
-const Player = require('../db/models/player');
-
 const { flagToCode } = require('./regional_indicators');
 
 function getPlayerData(p) {
@@ -33,7 +31,9 @@ async function generateTemplateFFA(players, doc, maps = 8) {
     });
   } else {
     rows.push(title);
-    rows.push(...players.map((p) => `${getPlayerData(p)} ${points}`));
+    const playersAlphabetic = players.slice()
+      .sort((a, b) => a.psn.toLowerCase().localeCompare(b.psn.toLowerCase()));
+    rows.push(...playersAlphabetic.map((p) => `${getPlayerData(p)} ${points}`));
   }
   const template = `${rows.join('\n')}`;
   let encodedData = encodeURI(template);
@@ -43,8 +43,6 @@ async function generateTemplateFFA(players, doc, maps = 8) {
   players.forEach((p) => {
     PSNs.push(p.psn.replace('_', '\\_'));
   });
-
-  // const PSNs = docs.map((p) => p.psn.replace('_', '\\_')).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 
   return [PSNs, `https://gb.hlorenzi.com/table?data=${encodedData}`];
 }

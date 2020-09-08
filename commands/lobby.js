@@ -351,7 +351,9 @@ function startLobby(docId) {
                   playersText = players.map((u, i) => `${i + 1}. <@${u}>`).join('\n');
                 }
 
-                const [PSNs, templateUrl] = await generateTemplateFFA(players, doc, doc.items ? 8 : 5);
+                const playerDocs = await Player.find({ discordId: { $in: players } });
+
+                const [PSNs, templateUrl] = await generateTemplateFFA(playerDocs, doc, doc.items ? 8 : 5);
 
                 message.edit({
                   embed: await getEmbed(doc, players, maps, roomChannel),

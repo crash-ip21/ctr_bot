@@ -642,12 +642,12 @@ module.exports = {
 
     const banned = await RankedBan.findOne({ discordId: user.id, guildId: guild.id });
     if (banned) {
-      return message.reply('you are currently banned from ranked FFAs.');
+      return message.reply('You are currently banned from ranked lobbies.');
     }
 
     const player = await Player.findOne({ discordId: user.id });
     if (!player || !player.psn) {
-      return message.reply('set your PSN first with `!set_psn`.');
+      return message.reply('You need to set your PSN first by using `!set_psn`.');
     }
 
     const isStaff = member.hasPermission(['MANAGE_CHANNELS', 'MANAGE_ROLES']);
@@ -655,11 +655,11 @@ module.exports = {
     const hasRankedRole = member.roles.cache.find((r) => r.name.toLowerCase() === 'ranked verified');
 
     if (!isStaff && !hasRankedRole) {
-      return message.channel.send('You don\'t have a ranked verified role to execute this command');
+      return message.channel.send('You don\'t have a ranked verified role to execute this command.');
     }
 
     if (message.channel.parent && message.channel.parent.name.toLowerCase() !== 'ranked lobbies') {
-      return message.reply('you can use this command only in Ranked Lobbies category.');
+      return message.reply('You can use this command only in `Ranked Lobbies` category.');
     }
 
     switch (action && action.toLowerCase()) {
@@ -667,7 +667,7 @@ module.exports = {
         // eslint-disable-next-line no-case-declarations
         const creatorsLobby = await Lobby.findOne({ creator: message.author.id });
         if (creatorsLobby && !isStaff) {
-          return message.reply('you have already created a lobby.');
+          return message.reply('You have already created a lobby.');
         }
 
         const cooldown = await Cooldown.findOne({ guildId: guild.id, discordId: message.author.id, name: 'lobby' });
@@ -675,7 +675,7 @@ module.exports = {
           const updatedAt = moment(cooldown.updatedAt);
           updatedAt.add(30, 'm');
           const wait = moment.duration(now.diff(updatedAt));
-          return message.reply(`you cannot create lobbies so often. You have to wait ${wait.humanize()}.`);
+          return message.reply(`You cannot create multiple lobbies in quick succession. You have to wait ${wait.humanize()}.`);
         }
 
         message.channel.send(`Select lobby mode. Waiting 1 minute.
@@ -705,7 +705,7 @@ module.exports = {
                 });
 
                 if (sameTypeLobby) {
-                  confirmMessage.edit('There is already lobby of this type, are you sure you want to create a new one? (yes/no)');
+                  confirmMessage.edit('There is already lobby of this type, are you sure you want to create a new one? (yes / no)');
                   const response = await message.channel
                     .awaitMessages((m) => m.author.id === message.author.id, { max: 1, time: 60000, errors: ['time'] })
                     .then((collected) => {
@@ -942,12 +942,12 @@ async function tickCount(reaction, user) {
         lobbiesChannel.createOverwrite(user, { VIEW_CHANNEL: false });
 
         const generalChannel = guild.channels.cache.find((c) => c.name === 'ranked-general');
-        const message = `${user}, you've been banned from ranked FFAs for ${banDuration.humanize()}.`;
+        const message = `${user}, you've been banned from ranked lobbies for ${banDuration.humanize()}.`;
         user.createDM().then((dm) => dm.send(message));
         generalChannel.send(message);
       } else if (doc.tickCount === 3 || doc.tickCount === 5) {
         const channel = guild.channels.cache.find((c) => c.name === 'ranked-general');
-        const message = `${user}, I will ban you from ranked FFAs for ${banDuration.humanize()} if you will continue to spam reactions.`;
+        const message = `${user}, I will ban you from ranked lobbies for ${banDuration.humanize()} if you continue to spam reactions.`;
         user.createDM().then((dm) => dm.send(message));
         channel.send(message);
       }
@@ -994,14 +994,14 @@ async function mogi(reaction, user, removed = false) {
             reaction.users.remove(user);
             const lobbiesChannel = guild.channels.cache.find((c) => c.name === 'ranked-lobbies');
             lobbiesChannel.createOverwrite(user, { VIEW_CHANNEL: false });
-            errorMsg = `${user}, you cannot join the lobbies, because you're banned.`;
+            errorMsg = `${user}, you cannot join ranked lobbies because you're banned.`;
             user.createDM().then((dmChannel) => dmChannel.send(errorMsg));
             return rankedGeneral.send(errorMsg).then((m) => m.delete({ timeout: 60000 }));
           }
 
           if (member.roles.cache.find((r) => r.name.toLowerCase() === 'muted')) {
             reaction.users.remove(user);
-            errorMsg = `${user}, you cannot join the lobbies, because you're muted.`;
+            errorMsg = `${user}, you cannot join ranked lobbies because you're muted.`;
             user.createDM().then((dmChannel) => dmChannel.send(errorMsg));
             return rankedGeneral.send(errorMsg).then((m) => m.delete({ timeout: 60000 }));
           }
@@ -1009,7 +1009,7 @@ async function mogi(reaction, user, removed = false) {
           const player = await Player.findOne({ discordId: user.id });
           if (!player || !player.psn) {
             reaction.users.remove(user);
-            errorMsg = `${user}, you need to set your PSN before you will be able to join lobbies. Example: \`!set_psn ctr_tourney_bot\`.`;
+            errorMsg = `${user}, you need to set your PSN before you are able to join ranked lobbies. Example: \`!set_psn ctr_tourney_bot\`.`;
             user.createDM().then((dmChannel) => dmChannel.send(errorMsg));
             return rankedGeneral.send(errorMsg).then((m) => m.delete({ timeout: 60000 }));
           }
@@ -1018,7 +1018,7 @@ async function mogi(reaction, user, removed = false) {
 
           if (repeatLobby) {
             reaction.users.remove(user);
-            errorMsg = `${user}, you cannot be in 2 lobbies at the same time.`;
+            errorMsg = `${user}, you cannot be in 2 ranked lobbies at the same time.`;
             user.createDM().then((dmChannel) => dmChannel.send(errorMsg));
             return rankedGeneral.send(errorMsg).then((m) => m.delete({ timeout: 60000 }));
           }
@@ -1037,7 +1037,7 @@ async function mogi(reaction, user, removed = false) {
             const rankTooHigh = playerRank > maxRank;
             if (rankTooLow || rankTooHigh) {
               reaction.users.remove(user);
-              errorMsg = `${user}, you cannot join this lobby. ${rankTooLow ? 'Your rank is too low.' : 'Your rank is too high.'}`;
+              errorMsg = `${user}, you cannot join this lobby because ${rankTooLow ? 'your rank is too low.' : 'your rank is too high.'}`;
               user.createDM().then((dmChannel) => dmChannel.send(errorMsg));
               return rankedGeneral.send(errorMsg).then((m) => m.delete({ timeout: 60000 }));
             }
@@ -1081,7 +1081,7 @@ async function mogi(reaction, user, removed = false) {
                 if (partnerBanned) {
                   reaction.users.remove(user);
                   userSavedDuo.delete();
-                  const errorMsg = `${user}, your partner is banned, duo has been deleted.`;
+                  const errorMsg = `${user}, your partner is banned. The duo has been deleted.`;
                   user.createDM().then((dmChannel) => dmChannel.send(errorMsg));
                   rankedGeneral.send(errorMsg).then((m) => m.delete({ timeout: 60000 }));
                   return;
@@ -1606,8 +1606,8 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
 
     Player.findOne({ discordId: newMember.id }).then((doc) => {
       if (!doc || !doc.psn) {
-        channel.send(`${newMember}, welcome to the Ranked Lobbies.
-Make sure to read the ${rankedRules} and ${rankedGuide} and set your PSN via command: \`!set_psn\` before you can join any lobbies.`);
+        channel.send(`${newMember}, welcome to the ranked lobbies.
+Make sure to read the ${rankedRules} and ${rankedGuide} and set your PSN by using \`!set_psn\` before you can join any lobbies.`);
       }
     });
   }

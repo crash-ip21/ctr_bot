@@ -41,6 +41,8 @@ async function rngModeBattle() {
     .sort((a, b) => a[1] - b[1])
     .map((p) => p[0]);
 
+  maps.pop();
+
   return maps;
 }
 

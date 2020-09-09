@@ -416,7 +416,8 @@ ${playersText}`,
 
                   let playersText = players.map((u, i) => `${i + 1}. <@${u}>`).join('\n');
 
-                  const [PSNs, templateUrl] = await generateTemplateFFA(players, doc, 5);
+                  const playerDocs = await Player.find({ discordId: { $in: players } });
+                  const [PSNs, templateUrl] = await generateTemplateFFA(playerDocs, doc, 5);
 
                   message.edit({
                     embed: await getEmbed(doc, players, maps, roomChannel),
@@ -456,6 +457,8 @@ ${playersText}`,
                       pinnedMessages.forEach((pinnedMessage) => pinnedMessage.unpin());
                       m.pin();
                     });
+
+                    roomChannel.send('You can check the battle mode rules by using `!battle_modes`!');
                   });
                 });
               });
@@ -478,9 +481,9 @@ function confirmLobbyStart(doc, message, override = false) {
     return message.channel.send('Lobby has already been started.');
   }
 
-  if (!override && minutes < 15) {
-    return message.channel.send(`You need to wait at least ${15 - minutes} more minutes to force start the lobby.`);
-  }
+  // if (!override && minutes < 15) {
+  //   return message.channel.send(`You need to wait at least ${15 - minutes} more minutes to force start the lobby.`);
+  // }
 
   const playersCount = doc.players.length;
   if (!override && doc.items && playersCount < 6) {

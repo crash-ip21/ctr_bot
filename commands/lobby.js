@@ -481,9 +481,9 @@ function confirmLobbyStart(doc, message, override = false) {
     return message.channel.send('Lobby has already been started.');
   }
 
-  // if (!override && minutes < 15) {
-  //   return message.channel.send(`You need to wait at least ${15 - minutes} more minutes to force start the lobby.`);
-  // }
+  if (!override && minutes < 15) {
+    return message.channel.send(`You need to wait at least ${15 - minutes} more minutes to force start the lobby.`);
+  }
 
   const playersCount = doc.players.length;
   if (!override && doc.items && playersCount < 6) {

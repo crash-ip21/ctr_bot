@@ -10,6 +10,8 @@ const Rank = new Schema({
   itemlessPosition: Number,
   duosRank: Number,
   duosPosition: Number,
+  battleRank: Number,
+  battlePosition: Number
 });
 
 module.exports = model('ranks', Rank);

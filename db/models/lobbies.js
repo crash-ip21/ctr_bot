@@ -20,6 +20,7 @@ const Lobby = new Schema({
   },
   duos: { type: Boolean, default: false },
   duosList: Array,
+  battle: { type: Boolean, default: false }
 });
 
 module.exports = model('lobbies', Lobby);

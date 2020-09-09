@@ -17,7 +17,7 @@ const teams = ['A', 'B', 'C', 'D'];
 const colors = ['#189dfe', '#ff0000', '#7fff00', '#fff000'];
 
 async function generateTemplateFFA(players, doc = true, maps = 8) {
-  const title = doc.duos ? 'Ranked Duos' : `${doc.items ? 'Items' : 'Itemless'} FFA`;
+  const title = doc.battle ? 'Ranked Battle Mode' : doc.duos ? 'Ranked Duos' : `${doc.items ? 'Items FFA' : 'Itemless FFA'}`;
   const docs = await Player.find({ discordId: { $in: players } });
 
   const rows = [];

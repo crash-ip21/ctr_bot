@@ -5,6 +5,7 @@ function sendMessage(message, rank) {
   let items = 'No rank';
   let itemless = 'No rank';
   let duos = 'No rank';
+  let battle = 'No rank';
 
   if (rank.itemRank) {
     items = `#${rank.itemPosition + 1} - ${parseInt(rank.itemRank, 10)}`;
@@ -16,6 +17,10 @@ function sendMessage(message, rank) {
 
   if (rank.duosRank) {
     duos = `#${rank.duosPosition + 1} - ${parseInt(rank.duosRank, 10)}`;
+  }
+
+  if (rank.battleRank) {
+    battle = `#${rank.battlePosition + 1} - ${parseInt(rank.battleRank, 10)}`;
   }
 
   message.channel.send({
@@ -37,6 +42,11 @@ function sendMessage(message, rank) {
           value: duos,
           inline: true,
         },
+        {
+          name: 'Battle Mode',
+          value: battle,
+          inline: true
+        }
       ],
     },
   });

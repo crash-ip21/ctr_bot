@@ -13,6 +13,8 @@ const Cooldown = require('../db/models/cooldowns');
 const RankedBan = require('../db/models/ranked_bans');
 const { client } = require('../bot');
 const rngPoolFFa = require('../utils/rngPoolFFa');
+const rngModeBattle = require('../utils/rngModeBattle');
+const rngPoolBattle = require('../utils/rngPoolBattle');
 const generateTemplateFFA = require('../utils/generateTemplateFFA');
 const { parseData } = require('../table');
 const sendLogMessage = require('../utils/sendLogMessage');
@@ -21,7 +23,7 @@ const config = require('../config.js');
 const lock = new AsyncLock();
 
 function getTitle(doc) {
-  return `${doc.locked.$isEmpty() ? '' : 'Locked '}${doc.duos ? 'Duos' : doc.items ? 'Item' : 'Itemless'} Lobby ${doc.pools ? '(pools)' : '(full rng)'}`;
+  return `${doc.locked.$isEmpty() ? '' : 'Locked '}${doc.battle ? 'Battle Mode' : doc.duos ? 'Duos' : doc.items ? 'Item' : 'Itemless'} Lobby${!doc.battle ? doc.pools ? ' (pools)' : ' (full rng)' : ''}`;
 }
 
 function getFooter(doc) {
@@ -31,11 +33,12 @@ function getFooter(doc) {
 const itemsIcon = 'https://vignette.wikia.nocookie.net/crashban/images/3/32/CTRNF-BowlingBomb.png';
 const itemlessIcon = 'https://vignette.wikia.nocookie.net/crashban/images/9/96/NF_Champion_Wheels.png';
 const duosIcon = 'https://vignette.wikia.nocookie.net/crashban/images/8/83/CTRNF-AkuUka.png';
+const battleIcon = 'https://vignette.wikia.nocookie.net/crashban/images/9/97/CTRNF-Invisibility.png';
 
 const PLAYER_DEFAULT_RANK = 1200;
 const DEFAULT_RANK = PLAYER_DEFAULT_RANK;
 
-async function getPlayerInfo(playerId, items, duos) {
+async function getPlayerInfo(playerId, items, duos, battle) {
   const p = await Player.findOne({ discordId: playerId });
   const rank = await Rank.findOne({ name: p.psn });
   let rankValue = DEFAULT_RANK;
@@ -43,6 +46,9 @@ async function getPlayerInfo(playerId, items, duos) {
     rankValue = items ? rank.itemRank : rank.itemlessRank;
     if (duos) {
       rankValue = rank.duosRank;
+    }
+    if (battle) {
+      rankValue = rank.battleRank;
     }
   }
 
@@ -75,7 +81,7 @@ async function getEmbed(doc, players, maps, roomChannel) {
     for (const playerId of players) {
       i += 1;
 
-      const [tag, psn, rank] = await getPlayerInfo(playerId, doc.items, doc.duos);
+      const [tag, psn, rank] = await getPlayerInfo(playerId, doc.items, doc.duos, doc.battle);
 
       ranks.push(rank);
 
@@ -126,7 +132,7 @@ async function getEmbed(doc, players, maps, roomChannel) {
     };
   }
 
-  const iconUrl = doc.duos ? duosIcon : doc.items ? itemsIcon : itemlessIcon;
+  const iconUrl = doc.battle ? battleIcon : doc.duos ? duosIcon : doc.items ? itemsIcon : itemlessIcon;
   if (maps) {
     fields = [
       {
@@ -282,6 +288,7 @@ async function findRoomChannel(guildId, n) {
     const roleRanked = await findRole(guild, 'Ranked Verified');
     const roleRankedItems = await findRole(guild, 'Ranked Items');
     const roleRankedItemless = await findRole(guild, 'Ranked Itemless');
+    const roleRankedBattle = await findRole(guild, 'Ranked Battle');
 
     channel = await guild.channels.create(channelName, {
       type: 'text',
@@ -292,6 +299,7 @@ async function findRoomChannel(guildId, n) {
     channel.createOverwrite(roleRanked, { VIEW_CHANNEL: true });
     channel.createOverwrite(roleRankedItems, { VIEW_CHANNEL: true });
     channel.createOverwrite(roleRankedItemless, { VIEW_CHANNEL: true });
+    channel.createOverwrite(roleRankedBattle, { VIEW_CHANNEL: true });
     channel.createOverwrite(guild.roles.everyone, { VIEW_CHANNEL: false });
   }
 
@@ -305,96 +313,153 @@ function startLobby(docId) {
         .get(doc.guild).channels.cache
         .get(doc.channel).messages
         .fetch(doc.message).then((message) => {
-          rngPoolFFa(doc.items, doc.pools).then((maps) => {
-            findRoom(doc).then((room) => {
-              findRoomChannel(doc.guild, room.number).then(async (roomChannel) => {
-                maps = maps.join('\n');
+          if (!doc.battle) {
+            rngPoolFFa(doc.items, doc.pools).then((maps) => {
+              findRoom(doc).then((room) => {
+                findRoomChannel(doc.guild, room.number).then(async (roomChannel) => {
+                  maps = maps.join('\n');
 
-                const { players } = doc;
+                  const { players } = doc;
 
-                let playersText = '';
-                if (doc.duos) {
-                  let playersCopy = [...players];
-                  if (players.length % 2 !== 0) {
-                    throw new Error('Players count is not divisible by 2');
-                  }
-
-                  doc.duosList.forEach((duo) => {
-                    duo.forEach((player) => {
-                      playersCopy = playersCopy.filter((p) => p !== player);
-                    });
-                  });
-
-                  playersCopy = playersCopy.sort(() => Math.random() - 0.5);
-
-                  const randomDuos = [];
-                  for (let i = 0; i < playersCopy.length; i += 1) {
-                    const last = randomDuos[randomDuos.length - 1];
-                    if (!last || last.length === 2) {
-                      randomDuos.push([playersCopy[i]]);
-                    } else {
-                      last.push(playersCopy[i]);
+                  let playersText = '';
+                  if (doc.duos) {
+                    let playersCopy = [...players];
+                    if (players.length % 2 !== 0) {
+                      throw new Error('Players count is not divisible by 2');
                     }
+
+                    doc.duosList.forEach((duo) => {
+                      duo.forEach((player) => {
+                        playersCopy = playersCopy.filter((p) => p !== player);
+                      });
+                    });
+
+                    playersCopy = playersCopy.sort(() => Math.random() - 0.5);
+
+                    const randomDuos = [];
+                    for (let i = 0; i < playersCopy.length; i += 1) {
+                      const last = randomDuos[randomDuos.length - 1];
+                      if (!last || last.length === 2) {
+                        randomDuos.push([playersCopy[i]]);
+                      } else {
+                        last.push(playersCopy[i]);
+                      }
+                    }
+
+                    doc.duosList = Array.from(doc.duosList).concat(randomDuos);
+                    doc = await doc.save();
+
+                    playersText += '**Teams:**\n';
+                    doc.duosList.forEach((duo, i) => {
+                      playersText += `${i + 1}.`;
+                      duo.forEach((player, k) => {
+                        playersText += `${k ? '⠀' : ''} <@${player}>\n`;
+                      });
+                    });
+                  } else {
+                    playersText = players.map((u, i) => `${i + 1}. <@${u}>`).join('\n');
                   }
 
-                  doc.duosList = Array.from(doc.duosList).concat(randomDuos);
-                  doc = await doc.save();
+                  const [PSNs, templateUrl] = await generateTemplateFFA(players, doc, doc.items ? 8 : 5);
 
-                  playersText += '**Teams:**\n';
-                  doc.duosList.forEach((duo, i) => {
-                    playersText += `${i + 1}.`;
-                    duo.forEach((player, k) => {
-                      playersText += `${k ? '⠀' : ''} <@${player}>\n`;
-                    });
+                  message.edit({
+                    embed: await getEmbed(doc, players, maps, roomChannel),
                   });
-                } else {
-                  playersText = players.map((u, i) => `${i + 1}. <@${u}>`).join('\n');
-                }
 
-                const [PSNs, templateUrl] = await generateTemplateFFA(players, doc, doc.items ? 8 : 5);
-
-                message.edit({
-                  embed: await getEmbed(doc, players, maps, roomChannel),
-                });
-
-                // todo add ranks and tags?
-                roomChannel.send({
-                  content: `**The ${getTitle(doc)} has started**
+                  // todo add ranks and tags?
+                  roomChannel.send({
+                    content: `**The ${getTitle(doc)} has started**
 *Organize your host and scorekeeper*
 Your room is ${roomChannel}.
 Use \`!lobby end\` when your match is done.
 ${playersText}`,
-                  embed: {
-                    fields: [
-                      {
-                        name: 'Maps',
-                        value: maps,
-                        inline: true,
-                      },
-                      {
-                        name: 'PSNs',
-                        value: PSNs,
-                        inline: true,
-                      },
-                      {
-                        name: 'Scorekeepers use this template:',
-                        value: `[Open template on gb.hlorenzi.com](${templateUrl})`,
-                      },
-                    ],
-                  },
-                }).then((m) => {
-                  roomChannel.messages.fetchPinned().then((pinnedMessages) => {
-                    pinnedMessages.forEach((pinnedMessage) => pinnedMessage.unpin());
-                    m.pin();
-                  });
+                    embed: {
+                      fields: [
+                        {
+                          name: 'Maps',
+                          value: maps,
+                          inline: true,
+                        },
+                        {
+                          name: 'PSNs',
+                          value: PSNs,
+                          inline: true,
+                        },
+                        {
+                          name: 'Scorekeepers use this template:',
+                          value: `[Open template on gb.hlorenzi.com](${templateUrl})`,
+                        },
+                      ],
+                    },
+                  }).then((m) => {
+                    roomChannel.messages.fetchPinned().then((pinnedMessages) => {
+                      pinnedMessages.forEach((pinnedMessage) => pinnedMessage.unpin());
+                      m.pin();
+                    });
 
-                  if (maps.includes('Tiger Temple')) {
-                    roomChannel.send('Remember: Tiger Temple shortcut is banned! <:feelsbanman:649075198997561356>');
-                  }
+                    if (maps.includes('Tiger Temple')) {
+                      roomChannel.send('Remember: Tiger Temple shortcut is banned! <:feelsbanman:649075198997561356>');
+                    }
+                  });
                 });
               });
             });
-          });
+          } else {
+            rngPoolBattle(true).then((maps) => {
+              findRoom(doc).then((room) => {
+                findRoomChannel(doc.guild, room.number).then(async (roomChannel) => {
+                  maps = maps.join('\n');
+                  let modes = (await rngModeBattle(false)).join('\n');
+
+                  const { players } = doc;
+
+                  let playersText = players.map((u, i) => `${i + 1}. <@${u}>`).join('\n');
+
+                  const [PSNs, templateUrl] = await generateTemplateFFA(players, doc, 5);
+
+                  message.edit({
+                    embed: await getEmbed(doc, players, maps, roomChannel),
+                  });
+
+                  roomChannel.send({
+                    content: `**The ${getTitle(doc)} has started**
+*Organize your host and scorekeeper*
+Your room is ${roomChannel}.
+Use \`!lobby end\` when your match is done.
+${playersText}`,
+                    embed: {
+                      fields: [
+                        {
+                          name: 'Maps',
+                          value: maps,
+                          inline: true,
+                        },
+                        {
+                          name: 'PSNs',
+                          value: PSNs,
+                          inline: true,
+                        },
+                        {
+                          name: 'Modes',
+                          value: modes,
+                          inline: true
+                        },
+                        {
+                          name: 'Scorekeepers use this template:',
+                          value: `[Open template on gb.hlorenzi.com](${templateUrl})`,
+                        },
+                      ],
+                    },
+                  }).then((m) => {
+                    roomChannel.messages.fetchPinned().then((pinnedMessages) => {
+                      pinnedMessages.forEach((pinnedMessage) => pinnedMessage.unpin());
+                      m.pin();
+                    });
+                  });
+                });
+              });
+            });
+          }
         });
     });
 }
@@ -425,8 +490,12 @@ function confirmLobbyStart(doc, message, override = false) {
     return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start Duos lobby with player count not divisible by 2.`);
   }
 
-  if (!override && !doc.items && playersCount < 4) {
+  if (!override && !doc.items && !doc.battle && playersCount < 4) {
     return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start itemless lobby with less than 4 players.`);
+  }
+
+  if (!override && doc.battle && playersCount < 2) {
+    return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start battle mode lobby with less than 2 players.`);
   }
 
   return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players. Are you sure you want to start it? Say \`yes\` or \`no\`.`)
@@ -615,7 +684,8 @@ module.exports = {
 2 - Itemless (full rng)
 3 - Items (full rng)
 4 - Duos (pools)
-5 - Duos (full rng)`).then((confirmMessage) => {
+5 - Duos (full rng)
+6 - Battle Mode (pools)`).then((confirmMessage) => {
           message.channel.awaitMessages((m) => m.author.id === message.author.id, {
             max: 1,
             time: 60000,
@@ -625,12 +695,13 @@ module.exports = {
               const collectedMessage = collected.first();
               const { content } = collectedMessage;
               collectedMessage.delete();
-              if (['0', '1', '2', '3', '4', '5'].includes(content)) {
+              if (['0', '1', '2', '3', '4', '5', '6'].includes(content)) {
                 const items = ['1', '3', '4', '5'].includes(content);
                 const duos = ['4', '5'].includes(content);
+                const battle = ['6'].includes(content);
 
                 const sameTypeLobby = await Lobby.findOne({
-                  duos, items, started: false, guild: message.guild.id,
+                  battle, duos, items, started: false, guild: message.guild.id,
                 });
 
                 if (sameTypeLobby) {
@@ -651,7 +722,7 @@ module.exports = {
 
                 const fromPools = ['0', '1', '4'].includes(content);
 
-                const roleName = `ranked ${duos ? 'duos' : items ? 'items' : 'itemless'}`;
+                const roleName = `ranked ${battle ? 'battle' : duos ? 'duos' : items ? 'items' : 'itemless'}`;
                 let role = guild.roles.cache.find((r) => r.name.toLowerCase() === roleName);
                 if (!role) {
                   role = await guild.roles.create({
@@ -671,6 +742,7 @@ module.exports = {
                 lobby.creator = message.author.id;
                 lobby.items = items;
                 lobby.duos = duos;
+                lobby.battle = battle;
                 lobby.pools = fromPools;
                 lobby.save().then(async (doc) => {
                   guild.channels.cache.find((c) => c.name === 'ranked-lobbies')
@@ -813,11 +885,11 @@ The value should be in range: \`${diffMin} - ${diffMax}\`. Defaults to \`${diffD
                 const roomChannel = message.guild.channels.cache.find((c) => c.name === `ranked-room-${room.number}`);
                 if (roomChannel) {
                   const pings = doc.players.map((p) => `<@${p}>`).join(' ');
-                  roomChannel.send(`I need reactions from 2 other people in the lobby to confirm.\n${pings}`).then((voteMessage) => {
+                  roomChannel.send(`I need reactions from ${Math.ceil(doc.players.length / 4)} other people in the lobby to confirm.\n${pings}`).then((voteMessage) => {
                     voteMessage.react('✅');
 
                     const filter = (r, u) => ['✅'].includes(r.emoji.name) && doc.players.includes(u.id) && u.id !== message.author.id;
-                    voteMessage.awaitReactions(filter, { max: 2, time: 60000, errors: ['time'] })
+                    voteMessage.awaitReactions(filter, { max: Math.ceil(doc.players.length / 4), time: 60000, errors: ['time'] })
                       .then((collected) => {
                         deleteLobby(doc, msg);
                       })
@@ -1379,6 +1451,7 @@ async function getRanks() {
   const items = 'iwkwkl';
   const itemless = 'Rt4eY_';
   const duos = 'HzYdL_';
+  const battle = 'fgDPyd';
 
   const itemsResponse = await axios.post(url, `{
   team(teamId: "${items}")
@@ -1402,6 +1475,16 @@ async function getRanks() {
 
   const duosResponse = await axios.post(url, `{
   team(teamId: "${duos}")
+    {
+      id, kind, name, tag, iconSrc, flag, gamePreset, ownerIds, updaterIds, createDate, modifyDate, activityDate, wins, draws, losses, baseWins, baseDraws, baseLosses, ratingScheme, ratingMin, tiers { name, lowerBound, color }, ratingElo { initial, scalingFactors }, ratingMk8dxMmr { initial, scalingFactors, baselines }, matchCount, playerCount,
+      players { name, ranking, maxRanking, minRanking, wins, losses, playedMatchCount, firstActivityDate, lastActivityDate, rating, ratingGain, maxRating, minRating, maxRatingGain, maxRatingLoss, points, maxPointsGain }
+    }
+}`, {
+    headers: { 'Content-Type': 'text/plain' },
+  });
+
+  const battleResponse = await axios.post(url, `{
+  team(teamId: "${battle}")
     {
       id, kind, name, tag, iconSrc, flag, gamePreset, ownerIds, updaterIds, createDate, modifyDate, activityDate, wins, draws, losses, baseWins, baseDraws, baseLosses, ratingScheme, ratingMin, tiers { name, lowerBound, color }, ratingElo { initial, scalingFactors }, ratingMk8dxMmr { initial, scalingFactors, baselines }, matchCount, playerCount,
       players { name, ranking, maxRanking, minRanking, wins, losses, playedMatchCount, firstActivityDate, lastActivityDate, rating, ratingGain, maxRating, minRating, maxRatingGain, maxRatingLoss, points, maxPointsGain }
@@ -1440,6 +1523,16 @@ async function getRanks() {
     }
     players[name].duosRank = p.rating;
     players[name].duosPosition = p.ranking;
+  });
+
+  const battlePlayers = battleResponse.data.data.team.players;
+  battlePlayers.forEach((p) => {
+    const { name } = p;
+    if (!(name in players)) {
+      players[name] = { name };
+    }
+    players[name].battleRank = p.rating;
+    players[name].battlePosition = p.ranking;
   });
 
   await Rank.deleteMany();

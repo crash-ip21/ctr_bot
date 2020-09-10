@@ -15,7 +15,8 @@ module.exports = {
 
     message.channel.send('Generating the table...').then((m) => {
       drawTable(rows.join('\n')).then((attachment) => {
-        message.channel.send({ files: [attachment] }).then((m2) => {
+        message.channel.send(message.author, { files: [attachment] }).then((m2) => {
+          message.delete();
           m.delete();
         }).catch(console.error);
       });

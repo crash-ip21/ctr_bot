@@ -258,13 +258,11 @@ const flagCodeMap = {
   '🇿🇦': 'ZA',
   '🇿🇲': 'ZM',
   '🇿🇼': 'ZW',
+  '🏴󠁧󠁢󠁥󠁮󠁧󠁿': 'GB_EN',
+  '🏴󠁧󠁢󠁳󠁣󠁴󠁿': 'GB_SC',
+  '🏴󠁧󠁢󠁷󠁬󠁳󠁿': 'GB_WA',
 };
 
-const flagToCode = (flag) => {
-  if (flag === '🏴󠁧󠁢󠁥󠁮󠁧󠁿') {
-    flag = '🇬🇧';
-  }
-  return flagCodeMap[flag];
-};
+const flagToCode = (flag) => flagCodeMap[flag];
 
 module.exports.flagToCode = flagToCode;

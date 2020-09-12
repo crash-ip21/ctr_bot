@@ -5,6 +5,7 @@ module.exports = {
   description: 'Generate score table. https://gb.hlorenzi.com',
   cooldown: 5,
   guildOnly: true,
+  aliases: ['t'],
   execute(message) {
     const rows = message.content.split('\n');
     rows.shift();

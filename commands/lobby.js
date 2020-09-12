@@ -127,6 +127,8 @@ async function getEmbed(doc, players, maps, roomChannel) {
   }
 
   const iconUrl = doc.duos ? duosIcon : doc.items ? itemsIcon : itemlessIcon;
+  const timestamp = doc.started ? doc.startedAt : doc.date;
+
   if (maps) {
     fields = [
       {
@@ -171,6 +173,7 @@ async function getEmbed(doc, players, maps, roomChannel) {
       },
       fields,
       footer: getFooter(doc),
+      timestamp,
     };
   }
 
@@ -209,6 +212,7 @@ async function getEmbed(doc, players, maps, roomChannel) {
       },
       fields,
       footer: getFooter(doc),
+      timestamp,
     };
   }
 
@@ -230,6 +234,7 @@ async function getEmbed(doc, players, maps, roomChannel) {
     description: 'React with ✅ to participate',
     fields,
     footer: getFooter(doc),
+    timestamp,
   };
 }
 

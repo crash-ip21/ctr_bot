@@ -4,7 +4,7 @@ const config = require('../config');
 module.exports = {
   name: 'draft2',
   description: `Generate draft links using the new draft tool
-\`!draftv2 [type] @CaptainA @CaptainB [bans] [picks] [timeout]\``,
+\`!draft2 [type] @CaptainA @CaptainB [bans] [picks] [timeout]\``,
   guildOnly: true,
   cooldown: 10,
   aliases: ['new_draft', 'draftv2'],

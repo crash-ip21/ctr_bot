@@ -44,7 +44,7 @@ async function generateTemplateFFA(players, doc, maps = 8) {
     PSNs.push(p.psn.replace('_', '\\_'));
   });
 
-  return [PSNs, `https://gb.hlorenzi.com/table?data=${encodedData}`];
+  return [PSNs, `https://gb.hlorenzi.com/table?data=${encodedData}`, template];
 }
 
 module.exports = generateTemplateFFA;

@@ -353,7 +353,7 @@ function startLobby(docId) {
 
                 const playerDocs = await Player.find({ discordId: { $in: players } });
 
-                const [PSNs, templateUrl] = await generateTemplateFFA(playerDocs, doc, doc.items ? 8 : 5);
+                const [PSNs, templateUrl, template] = await generateTemplateFFA(playerDocs, doc, doc.items ? 8 : 5);
 
                 message.edit({
                   embed: await getEmbed(doc, players, maps, roomChannel),
@@ -378,16 +378,20 @@ ${playersText}`,
                         value: PSNs,
                         inline: true,
                       },
-                      {
-                        name: 'Scorekeepers use this template:',
-                        value: `[Open template on gb.hlorenzi.com](${templateUrl})`,
-                      },
                     ],
                   },
                 }).then((m) => {
                   roomChannel.messages.fetchPinned().then((pinnedMessages) => {
                     pinnedMessages.forEach((pinnedMessage) => pinnedMessage.unpin());
                     m.pin();
+                  });
+
+                  roomChannel.send({
+                    embed: {
+                      title: 'Scores Template',
+                      description: `\`\`\`${template}\`\`\`
+[Open template on gb.hlorenzi.com](${templateUrl})`,
+                    },
                   });
 
                   if (maps.includes('Tiger Temple')) {

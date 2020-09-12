@@ -20,8 +20,8 @@
     "log-timestamp": "^0.3.0",
     "moment": "^2.27.0",
     "moment-timezone": "^0.5.31",
-    "mongodb": "^3.6.1",
-    "mongoose": "^5.10.2",
+    "mongodb": "^3.6.2",
+    "mongoose": "^5.10.5",
     "ytdl-core": "^2.1.7"
   },
   "devDependencies": {

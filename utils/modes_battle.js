@@ -1,17 +1,18 @@
 module.exports.battleModes = [
     [
-      'Limit Battle',
-      'Pure Chaos'
+      'Basic Limit Battle',
+      'Balanced Limit Battle'
     ],
     [
-      'Crystal Chaos'
+      'Crystal Grab'
     ],
     [
-      'Last Man Standing',
-      'Minefield',
-      'Snipe Mode'
+      'Basic Last Kart Driving',
+      'Minefield Mode',
+      'Bomb Snipe Mode'
     ],
     [
-      'Steal the Bacon'
+      'Basic Steal The Bacon',
+      'Balanced Steal The Bacon'
     ]
 ];

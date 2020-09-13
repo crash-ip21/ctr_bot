@@ -2,11 +2,9 @@
 *  https://github.com/hlorenzi/mk8d_ocr
 *  */
 
-const config = require('../config.js');
-
-
 const Canvas = require('canvas');
 const moment = require('moment');
+const config = require('../config.js');
 
 let refreshTimeout = null;
 let warningFlashTimeout = null;
@@ -794,9 +792,14 @@ async function drawTableDefault(elem, totalElem, warningElem, gamedata) {
       // console.log(src);
       const url = `./table/assets/flags/${src}.svg`;
       // console.log(url);
-      const flag = await Canvas.loadImage(
-        url,
-      );
+      let flag = '';
+      try {
+        flag = await Canvas.loadImage(
+          url,
+        );
+      } catch (error) {
+        console.error(error);
+      }
       flags[src] = flag;
       allFlagsLoaded &= flag;
     }

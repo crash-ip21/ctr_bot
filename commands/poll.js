@@ -3,9 +3,9 @@
  * @param userName
  * @param question
  * @param options
- * @returns {Promise<{author: {name: string}, fields: [{name: string, value: *}, {name: string, value: *}]}>}
+ * @returns {{author: {name: string}, fields: [{name: string, value: *}, {name: string, value: *}]}}
  */
-async function getEmbed(userName, question, options) {
+function getEmbed(userName, question, options) {
   return {
     author: {
       name: userName + ' has created a poll!',

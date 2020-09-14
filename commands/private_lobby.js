@@ -1,5 +1,5 @@
-const deletePrivateLobbyByUser = require('../utils/deletePrivateLobbyByUser');
 const Moment = require('moment');
+const deletePrivateLobbyByUser = require('../utils/deletePrivateLobbyByUser');
 const PrivateLobby = require('../db/models/private_lobbies');
 
 /**
@@ -89,15 +89,15 @@ ${allowedChannels.join('\n')}`);
 
 Example usage: !private_lobby FFA 8.\`\`\``);
     }
-    
+
     if (mode === 'end') {
       const privateLobbyPromise = PrivateLobby.findOne({ creator: message.member.user.id });
-      
+
       privateLobbyPromise.then((privateLobby) => {
         if (!privateLobby) {
           return message.channel.send('You have not started a private lobby.');
         }
-        
+
         deletePrivateLobbyByUser(message.channel, message.member.user.id);
         message.channel.send('Your private lobby was removed.');
       });
@@ -106,33 +106,33 @@ Example usage: !private_lobby FFA 8.\`\`\``);
         if (privateLobby) {
           return message.channel.send('You have already created a private lobby. Please remove the old one if you want to create another one.');
         }
-        
+
         if (!modes.find((t) => (t.toLowerCase() === mode.toLowerCase()))) {
           return message.channel.send('Invalid mode.');
         }
-  
+
         mode = mode.charAt(0).toUpperCase() + mode.slice(1);
-  
+
         const defaultDescription = 'React with ✅ to participate!';
         const closedDescription = 'The lobby is now closed!';
-  
+
         const author = `<@${message.member.user.id}>`;
         const maxPlayers = args[1] || 8;
         const created = Moment().format('hh:mm:ss a');
         const players = [];
-  
+
         const info = [
           `Creator: **${author}**`,
           `Mode: **${mode}**`,
           `Players: **${maxPlayers}**`,
         ];
-        
+
         let embed = getEmbed(info, players, defaultDescription, created);
-        
+
         message.channel.send({ embed }).then((m) => {
           m.react('✅');
           m.pin();
-  
+
           privateLobby = new PrivateLobby({
             guild: m.guild.id,
             channel: message.channel.id,
@@ -143,9 +143,9 @@ Example usage: !private_lobby FFA 8.\`\`\``);
             players,
             date: created,
           });
-          
+
           privateLobby.save();
-          
+
           const filter = (r, u) => (['✅'].includes(r.emoji.name) && u.id !== m.author.id);
           const options = {
             max: maxPlayers,
@@ -153,7 +153,7 @@ Example usage: !private_lobby FFA 8.\`\`\``);
             errors: ['time'],
             dispose: true,
           };
-  
+
           const collector = m.createReactionCollector(filter, options);
           collector.on('collect', (reaction, user) => {
             if (reaction.message.id === m.id) {
@@ -161,17 +161,17 @@ Example usage: !private_lobby FFA 8.\`\`\``);
                 if (user.id !== m.author.id) {
                   players.push(`<@${user.id}>`);
                 }
-  
+
                 embed = getEmbed(info, players, defaultDescription, created);
               } else {
                 embed = getEmbed(info, players, closedDescription, created);
               }
-  
+
               m.edit({ embed });
               updatePrivateLobby(privateLobby, players, message.member.user.id);
             }
           });
-  
+
           collector.on('remove', ((reaction, user) => {
             if (reaction.message.id === m.id) {
               players.forEach((v, i) => {
@@ -179,13 +179,13 @@ Example usage: !private_lobby FFA 8.\`\`\``);
                   players.splice(i, 1);
                 }
               });
-  
+
               embed = getEmbed(info, players, defaultDescription, created);
               m.edit({ embed });
               updatePrivateLobby(privateLobby, players, message.member.user.id);
             }
           }));
-  
+
           collector.on('end', () => {
             deletePrivateLobbyByUser(message.channel, message.member.user.id);
           });

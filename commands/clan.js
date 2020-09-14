@@ -24,12 +24,12 @@ function getEmbed(maxClans, clans, page, pages) {
       {
         name: `Clans (${maxClans})`,
         value: clans.join('\n'),
-      }
+      },
     ],
     footer: {
       text: `Page ${page} of ${pages}`,
-    }
-  }
+    },
+  };
 }
 
 module.exports = {
@@ -70,19 +70,17 @@ Edit clans:
 
           const clanList = clansObjects
             .sort((a, b) => b.size - a.size)
-            .map((c) => `${c.shortName}: **${c.fullName}** (${c.size} members)`)
-          ;
-          
+            .map((c) => `${c.shortName}: **${c.fullName}** (${c.size} members)`);
           const elementsPerPage = 20;
           let page = 1;
           let pagination = createPagination(clanList, page, elementsPerPage);
           let embed = getEmbed(clanList.length, pagination.elements, page, pagination.pages);
 
-          message.channel.send({ embed: embed }).then((m) => {
+          message.channel.send({ embed }).then((m) => {
             if (pagination.pages > 1) {
               m.react('⬅️');
               m.react('➡️');
-  
+
               // only the user that executed the command can react
               const filter = (r, u) => (['⬅️', '➡️'].includes(r.emoji.name) && u.id !== m.author.id && u.id === message.author.id);
               const options = {
@@ -90,32 +88,32 @@ Edit clans:
                 errors: ['time'],
                 dispose: true,
               };
-              
+
               const collector = m.createReactionCollector(filter, options);
               collector.on('collect', (reaction, user) => {
                 if (reaction.message.id === m.id) {
                   if (reaction.emoji.name === '⬅️') {
                     page -= 1;
-        
+
                     if (page < 1) {
                       page = 1;
                     }
                   }
-                  
+
                   if (reaction.emoji.name === '➡️') {
                     page += 1;
-                    
+
                     if (page > pagination.pages) {
                       page = pagination.pages;
                     }
                   }
-                  
+
                   pagination = createPagination(clanList, page, elementsPerPage);
                   embed = getEmbed(clanList.length, pagination.elements, page, pagination.pages);
-                  
-                  m.edit({ embed: embed });
+
+                  m.edit({ embed });
                 }
-                
+
                 reaction.users.remove(user);
               });
             }

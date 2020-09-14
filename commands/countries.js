@@ -62,7 +62,7 @@ module.exports = {
           createPaginableContent(message.channel, message.author.id, {
             outputType                : 'text',
             elements                  : players,
-            elementsPerPage           : 2,
+            elementsPerPage           : 20,
             textOptions               : { heading: `Players from ${flag} (${players.length})` },
             reactionCollectorOptions  : { time: 3600000 }
           });

@@ -8,7 +8,7 @@
 function getEmbed(userName, question, options) {
   return {
     author: {
-      name: userName + ' has created a poll!',
+      name: `${userName} has created a poll!`,
     },
     fields: [
       {
@@ -17,9 +17,9 @@ function getEmbed(userName, question, options) {
       },
       {
         name: 'Options',
-        value: options.join('\n')
-      }
-    ]
+        value: options.join('\n'),
+      },
+    ],
   };
 }
 
@@ -50,7 +50,7 @@ module.exports = {
       '7️⃣',
       '8️⃣',
       '9️⃣',
-    ]
+    ];
 
     const lines = message.content.split('\n');
     const splittedFirstLine = lines[0].split(' ');
@@ -80,12 +80,12 @@ module.exports = {
 
     const embed = getEmbed(message.member.user.username, question, modifiedLines);
 
-    message.channel.send({ embed : embed}).then((m) => {
+    message.channel.send({ embed }).then((m) => {
       modifiedLines.forEach((l, i) => {
         const reactionEmoji = reactionEmojis[i];
 
         m.react(reactionEmoji);
       });
     });
-  }
-}
+  },
+};

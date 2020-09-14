@@ -33,14 +33,6 @@ module.exports = {
         return;
       }
 
-      const permissions = command.permissions ? command.permissions.join(', ') : 'EVERYONE';
-
-      const permLength = command.permissions && command.permissions.length > 1;
-
-      const permissionsText = member && member.roles.cache.find((r) => r.name === 'Admin')
-        ? `\nPermission${permLength ? 's' : ''}: \`${permissions}\``
-        : '';
-
       fields.push({
         name: commandName,
         value: `*${description}*`,
@@ -48,10 +40,7 @@ module.exports = {
       });
     });
 
-    const fieldsOut = fields.map((f) => `**${f.name}**\n${f.value}`);
-    const staffOut = staffFields.map((p) => `**${p.name}**\n${p.value}`);
-
-    message.channel.send({
+    const output = {
       embed: {
         title: 'Help',
         fields: [
@@ -59,28 +48,31 @@ module.exports = {
           {
             name: 'Created by',
             value: '<@548878570722820097>',
-          }],
+          },
+        ],
       },
-    })
-      .then((helpMessage) => {
-        if (staffOut.length) {
-          message.channel.send({
-            embed: {
-              title: 'Staff Help',
-              fields: staffFields,
-            },
-          });
-        }
+    };
 
-        message.channel
-          .awaitMessages((m) => m.author.id === message.author.id, { max: 1, time: 60000, errors: ['time'] })
-          .then((collected) => {
-            const { content } = collected.first();
-            if (content.toLowerCase().startsWith('thank')) {
-              helpMessage.delete();
-              message.channel.send('You are welcome.');
-            }
+    const staffOutput = {
+      embed: {
+        title: 'Staff Help',
+        fields: staffFields,
+      },
+    };
+
+    message.member.user.createDM()
+      .then((dm) => {
+        dm.send(output)
+          .catch(() => {
+            message.channel.send(output);
           });
+
+        if (staffFields.length) {
+          dm.send(staffOutput)
+            .catch(() => {
+              message.channel.send(staffOutput);
+            });
+        }
       });
   },
 };

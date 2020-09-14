@@ -1,6 +1,28 @@
 const Player = require('../db/models/player');
+const createPagination = require('../utils/createPagination');
 
-const sendWithoutPing = (channel, message) => channel.send('...').then((m) => m.edit(message));
+/**
+ * Returns the embed
+ * @param flag
+ * @param players
+ * @param maxPlayers
+ * @param page
+ * @param pages
+ * @returns {{footer: {text: string}, fields: [{name: string, value: *}]}}
+ */
+function getEmbed(flag, players, maxPlayers, page, pages) {
+  return {
+    fields: [
+      {
+        name: `Players from ${flag} (${maxPlayers})`,
+        value: players.join('\n'),
+      },
+    ],
+    footer: {
+      text: `Page ${page} of ${pages}`,
+    },
+  };
+}
 
 module.exports = {
   name: 'countries',
@@ -26,23 +48,6 @@ module.exports = {
           },
         ]).then((counts) => {
           const out = counts.map((c) => `${c._id} ${c.count}`).join('\t');
-          // const fields = counts.map((c) => ({
-          //   name: c._id,
-          //   value: c.count,
-          //   inline: true,
-          // }));
-
-          // const halfLength = Math.floor(out.length / 2);
-          // const chunks = [
-          //   out.slice(0, halfLength),
-          //   out.slice(halfLength),
-          // ];
-          // const fields = out.map(chunk => {
-          //   return {
-          //
-          //   }
-          // })
-          // message.channel.send(out);
 
           message.channel.send(out);
         });
@@ -50,24 +55,61 @@ module.exports = {
         const flag = args.shift();
 
         if (!message.client.flags.includes(flag)) {
-          return message.channel.send('You should specify country flag. To see them all use !flags command');
+          return message.channel.send('You should specify country flag. To see them all use the `!flags` command');
         }
 
         Player.find({ flag }).then(async (players) => {
+          if (players.length <= 0) {
+            return message.channel.send(`There are no players from ${flag}.`);
+          }
+
           players = players.filter((p) => members.has(p.discordId)).map((p) => `<@${p.discordId}>`);
 
-          let out = `${flag}`;
-          for (const player of players) {
-            if (`${out}\n${player}`.length < 2000) {
-              out = `${out}\n${player}`;
-            } else {
-              await sendWithoutPing(message.channel, out);
-              out = `${player}`;
+          const elementsPerPage = 20;
+          let page = 1;
+          let pagination = createPagination(players, page, elementsPerPage);
+          let embed = getEmbed(flag, pagination.elements, players.length, page, pagination.pages);
+
+          message.channel.send({ embed }).then((m) => {
+            if (pagination.pages > 1) {
+              m.react('⬅️');
+              m.react('➡️');
+
+              // only the user that executed the command can react
+              const filter = (r, u) => (['⬅️', '➡️'].includes(r.emoji.name) && u.id !== m.author.id && u.id === message.author.id);
+              const options = {
+                time: 3600000,
+                errors: ['time'],
+                dispose: true,
+              };
+
+              const collector = m.createReactionCollector(filter, options);
+              collector.on('collect', (reaction, user) => {
+                if (reaction.message.id === m.id) {
+                  if (reaction.emoji.name === '⬅️') {
+                    page -= 1;
+
+                    if (page < 1) {
+                      page = 1;
+                    }
+                  }
+
+                  if (reaction.emoji.name === '➡️') {
+                    page += 1;
+
+                    if (page > pagination.pages) {
+                      page = pagination.pages;
+                    }
+                  }
+
+                  pagination = createPagination(players, page, elementsPerPage);
+                  embed = getEmbed(flag, pagination.elements, players.length, page, pagination.pages);
+
+                  m.edit({ embed });
+                }
+              });
             }
-          }
-          if (out) {
-            await sendWithoutPing(message.channel, out);
-          }
+          });
         });
       }
     });

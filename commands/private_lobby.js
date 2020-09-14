@@ -1,5 +1,5 @@
 const Moment = require('moment');
-const deletePrivateLobby = require('../utils/deletePrivateLobby');
+const deletePrivateLobbyByUser = require('../utils/deletePrivateLobbyByUser');
 const PrivateLobby = require('../db/models/private_lobbies');
 
 /**
@@ -90,93 +90,107 @@ ${allowedChannels.join('\n')}`);
 Example usage: !private_lobby FFA 8.\`\`\``);
     }
 
-    PrivateLobby.findOne({ creator: message.member.user.id }).then((privateLobby) => {
-      if (privateLobby) {
-        return message.channel.send('You have already created a private lobby. Please remove the old one if you want to create another one.');
-      }
-      if (!modes.find((t) => (t.toLowerCase() === mode.toLowerCase()))) {
-        return message.channel.send('Invalid mode.');
-      }
+    if (mode === 'end') {
+      const privateLobbyPromise = PrivateLobby.findOne({ creator: message.member.user.id });
 
-      mode = mode.charAt(0).toUpperCase() + mode.slice(1);
+      privateLobbyPromise.then((privateLobby) => {
+        if (!privateLobby) {
+          return message.channel.send('You have not started a private lobby.');
+        }
 
-      const defaultDescription = 'React with ✅ to participate!';
-      const closedDescription = 'The lobby is now closed!';
+        deletePrivateLobbyByUser(message.channel, message.member.user.id);
+        message.channel.send('Your private lobby was removed.');
+      });
+    } else {
+      PrivateLobby.findOne({ creator: message.member.user.id }).then((privateLobby) => {
+        if (privateLobby) {
+          return message.channel.send('You have already created a private lobby. Please remove the old one if you want to create another one.');
+        }
 
-      const author = `<@${message.member.user.id}>`;
-      const maxPlayers = args[1] || 8;
-      const created = Moment().format('hh:mm:ss a');
-      const players = [];
+        if (!modes.find((t) => (t.toLowerCase() === mode.toLowerCase()))) {
+          return message.channel.send('Invalid mode.');
+        }
 
-      const info = [
-        `Creator: **${author}**`,
-        `Mode: **${mode}**`,
-        `Players: **${maxPlayers}**`,
-      ];
+        mode = mode.charAt(0).toUpperCase() + mode.slice(1);
 
-      let embed = getEmbed(info, players, defaultDescription, created);
+        const defaultDescription = 'React with ✅ to participate!';
+        const closedDescription = 'The lobby is now closed!';
 
-      message.channel.send({ embed }).then((m) => {
-        m.react('✅');
-        m.pin();
+        const author = `<@${message.member.user.id}>`;
+        const maxPlayers = args[1] || 8;
+        const created = Moment().format('hh:mm:ss a');
+        const players = [];
 
-        privateLobby = new PrivateLobby({
-          guild: m.guild.id,
-          channel: message.channel.id,
-          message: m.id,
-          creator: message.member.user.id,
-          mode,
-          maxPlayers,
-          players,
-          date: created,
-        });
+        const info = [
+          `Creator: **${author}**`,
+          `Mode: **${mode}**`,
+          `Players: **${maxPlayers}**`,
+        ];
 
-        privateLobby.save();
+        let embed = getEmbed(info, players, defaultDescription, created);
 
-        const filter = (r, u) => (['✅'].includes(r.emoji.name) && u.id !== m.author.id);
-        const options = {
-          max: maxPlayers,
-          time: 3600000,
-          errors: ['time'],
-          dispose: true,
-        };
+        message.channel.send({ embed }).then((m) => {
+          m.react('✅');
+          m.pin();
 
-        const collector = m.createReactionCollector(filter, options);
-        collector.on('collect', (reaction, user) => {
-          if (reaction.message.id === m.id) {
-            if (reaction.users.cache.size < maxPlayers) {
-              if (user.id !== m.author.id) {
-                players.push(`<@${user.id}>`);
+          privateLobby = new PrivateLobby({
+            guild: m.guild.id,
+            channel: message.channel.id,
+            message: m.id,
+            creator: message.member.user.id,
+            mode,
+            maxPlayers,
+            players,
+            date: created,
+          });
+
+          privateLobby.save();
+
+          const filter = (r, u) => (['✅'].includes(r.emoji.name) && u.id !== m.author.id);
+          const options = {
+            max: maxPlayers,
+            time: 3600000,
+            errors: ['time'],
+            dispose: true,
+          };
+
+          const collector = m.createReactionCollector(filter, options);
+          collector.on('collect', (reaction, user) => {
+            if (reaction.message.id === m.id) {
+              if (reaction.users.cache.size < maxPlayers) {
+                if (user.id !== m.author.id) {
+                  players.push(`<@${user.id}>`);
+                }
+
+                embed = getEmbed(info, players, defaultDescription, created);
+              } else {
+                embed = getEmbed(info, players, closedDescription, created);
               }
+
+              m.edit({ embed });
+              updatePrivateLobby(privateLobby, players, message.member.user.id);
+            }
+          });
+
+          collector.on('remove', ((reaction, user) => {
+            if (reaction.message.id === m.id) {
+              players.forEach((v, i) => {
+                if (v === `<@${user.id}>`) {
+                  players.splice(i, 1);
+                }
+              });
 
               embed = getEmbed(info, players, defaultDescription, created);
-            } else {
-              embed = getEmbed(info, players, closedDescription, created);
+              m.edit({ embed });
+              updatePrivateLobby(privateLobby, players, message.member.user.id);
             }
+          }));
 
-            m.edit({ embed });
-            updatePrivateLobby(privateLobby, players, message.member.user.id);
-          }
-        });
-
-        collector.on('remove', ((reaction, user) => {
-          if (reaction.message.id === m.id) {
-            players.forEach((v, i) => {
-              if (v === `<@${user.id}>`) {
-                players.splice(i, 1);
-              }
-            });
-
-            embed = getEmbed(info, players, defaultDescription, created);
-            m.edit({ embed });
-            updatePrivateLobby(privateLobby, players, message.member.user.id);
-          }
-        }));
-
-        collector.on('end', () => {
-          deletePrivateLobby(message.channel, message.member.user.id);
+          collector.on('end', () => {
+            deletePrivateLobbyByUser(message.channel, message.member.user.id);
+          });
         });
       });
-    });
+    }
   },
 };

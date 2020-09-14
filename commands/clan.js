@@ -1,5 +1,6 @@
 const Clan = require('../db/models/clans');
 const Player = require('../db/models/player');
+const createPagination = require('../utils/createPagination');
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
@@ -7,6 +8,28 @@ function escapeRegExp(string) {
 
 function createCaseInsensitiveRegEx(s) {
   return new RegExp(`^${(escapeRegExp(s))}$`, 'i');
+}
+
+/**
+ * Returns the embed for the clan list
+ * @param maxClans
+ * @param clans
+ * @param page
+ * @param pages
+ * @returns {{footer: {text: string}, author: {icon_url: *, name: string}, description: *, fields: [{name: string, value: *}]}}
+ */
+function getEmbed(maxClans, clans, page, pages) {
+  return {
+    fields: [
+      {
+        name: `Clans (${maxClans})`,
+        value: clans.join('\n'),
+      },
+    ],
+    footer: {
+      text: `Page ${page} of ${pages}`,
+    },
+  };
 }
 
 module.exports = {
@@ -45,16 +68,56 @@ Edit clans:
             }
           });
 
-          const clansCount = clansObjects.length;
-
-          const clansOut = clansObjects
+          const clanList = clansObjects
             .sort((a, b) => b.size - a.size)
-            .map((c) => `${c.shortName}: **${c.fullName}** (${c.size} members)`)
-            .join('\n');
-          const text = `**Clans (${clansCount}):**
-${clansOut}`;
+            .map((c) => `${c.shortName}: **${c.fullName}** (${c.size} members)`);
+          const elementsPerPage = 20;
+          let page = 1;
+          let pagination = createPagination(clanList, page, elementsPerPage);
+          let embed = getEmbed(clanList.length, pagination.elements, page, pagination.pages);
 
-          message.channel.send(text);
+          message.channel.send({ embed }).then((m) => {
+            if (pagination.pages > 1) {
+              m.react('⬅️');
+              m.react('➡️');
+
+              // only the user that executed the command can react
+              const filter = (r, u) => (['⬅️', '➡️'].includes(r.emoji.name) && u.id !== m.author.id && u.id === message.author.id);
+              const options = {
+                time: 3600000,
+                errors: ['time'],
+                dispose: true,
+              };
+
+              const collector = m.createReactionCollector(filter, options);
+              collector.on('collect', (reaction, user) => {
+                if (reaction.message.id === m.id) {
+                  if (reaction.emoji.name === '⬅️') {
+                    page -= 1;
+
+                    if (page < 1) {
+                      page = 1;
+                    }
+                  }
+
+                  if (reaction.emoji.name === '➡️') {
+                    page += 1;
+
+                    if (page > pagination.pages) {
+                      page = pagination.pages;
+                    }
+                  }
+
+                  pagination = createPagination(clanList, page, elementsPerPage);
+                  embed = getEmbed(clanList.length, pagination.elements, page, pagination.pages);
+
+                  m.edit({ embed });
+                }
+
+                reaction.users.remove(user);
+              });
+            }
+          });
         });
       });
 

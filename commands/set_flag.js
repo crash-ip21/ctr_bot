@@ -28,7 +28,7 @@ module.exports = {
     message.guild.members.fetch(user).then((member) => {
       const discordId = member.user.id;
 
-      const e = 'You should specify country flag. To see them all use !flags command';
+      const e = 'You should specify country flag. To see them all use the `!flags` command';
       if (!countryFlag) {
         return message.channel.send(e);
       }

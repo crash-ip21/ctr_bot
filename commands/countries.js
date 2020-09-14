@@ -55,7 +55,7 @@ module.exports = {
         const flag = args.shift();
 
         if (!message.client.flags.includes(flag)) {
-          return message.channel.send('You should specify country flag. To see them all use !flags command');
+          return message.channel.send('You should specify country flag. To see them all use the `!flags` command');
         }
 
         Player.find({ flag }).then(async (players) => {

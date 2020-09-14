@@ -8,20 +8,14 @@ const createPagination = require('../utils/createPagination');
  * @param maxPlayers
  * @param page
  * @param pages
- * @returns {{footer: {text: string}, fields: [{name: string, value: *}]}}
+ * @returns {string}
  */
-function getEmbed(flag, players, maxPlayers, page, pages) {
-  return {
-    fields: [
-      {
-        name: `Players from ${flag} (${maxPlayers})`,
-        value: players.join('\n'),
-      },
-    ],
-    footer: {
-      text: `Page ${page} of ${pages}`,
-    },
-  };
+function getOutput(flag, players, maxPlayers, page, pages) {
+  return `**Players from ${flag} (${maxPlayers})**
+  
+${players.join('\n')}
+
+> Page ${page} of ${pages}`;
 }
 
 module.exports = {
@@ -68,9 +62,9 @@ module.exports = {
           const elementsPerPage = 20;
           let page = 1;
           let pagination = createPagination(players, page, elementsPerPage);
-          let embed = getEmbed(flag, pagination.elements, players.length, page, pagination.pages);
+          let output = getOutput(flag, pagination.elements, players.length, page, pagination.pages);
 
-          message.channel.send({ embed }).then((m) => {
+          message.channel.send(output).then((m) => {
             if (pagination.pages > 1) {
               m.react('⬅️');
               m.react('➡️');
@@ -103,10 +97,11 @@ module.exports = {
                   }
 
                   pagination = createPagination(players, page, elementsPerPage);
-                  embed = getEmbed(flag, pagination.elements, players.length, page, pagination.pages);
+                  output = getOutput(flag, pagination.elements, players.length, page, pagination.pages);
 
-                  m.edit({ embed });
+                  m.edit(output);
                 }
+                reaction.users.remove(user);
               });
             }
           });

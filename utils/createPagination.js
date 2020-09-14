@@ -1,32 +1,33 @@
 /**
  * Creates a pagination object
  * @param elements
- * @param page
+ * @param currentPage
  * @param elementsPerPage
  * @returns {{pages: number, offset: number, elements: *, limit: number}}
  */
-function createPagination(elements, page, elementsPerPage) {
-  const countElements = elements.length;
-  const countPages = Math.ceil(countElements / elementsPerPage);
+function createPagination(elements, currentPage, elementsPerPage) {
+  const numElements = elements.length;
+  const numPages = Math.ceil(numElements / elementsPerPage);
 
-  if (page <= 1) {
-    page = 1;
+  if (currentPage <= 1) {
+    currentPage = 1;
   }
 
-  if (page > countPages) {
-    page = countPages;
+  if (currentPage > numPages) {
+    currentPage = numPages;
   }
 
-  const offset = (page - 1) * elementsPerPage;
+  const offset = (currentPage - 1) * elementsPerPage;
   const limit = Number(offset) + Number(elementsPerPage);
 
   const slicedElements = elements.slice(offset, limit);
 
   return {
-    pages: countPages,
-    offset,
-    limit,
-    elements: slicedElements,
+    numPages    : numPages,
+    offset      : offset,
+    limit       : limit,
+    elements    : slicedElements,
+    currentPage : currentPage
   };
 }
 

@@ -10,7 +10,7 @@ const PrivateLobby = new Schema({
   mode: String,
   maxPlayers: Number,
   players: [String],
-  date: String
+  date: String,
 });
 
 module.exports = model('private_lobbies', PrivateLobby);

@@ -6,26 +6,17 @@ const PrivateLobby = require('../db/models/private_lobbies');
  * @param userId
  */
 function deletePrivateLobbyByUser(channel, userId) {
-    const privateLobbyPromise = PrivateLobby.findOne({ creator: userId });
-    
-    Promise.resolve(privateLobbyPromise).then((privateLobby) => {
-        if (privateLobby) {
-            channel.messages.fetch(privateLobby.message).then((privateLobbyMessage) => {
-                const fetchPromise = privateLobbyMessage.fetch(true);
-                
-                Promise.resolve(fetchPromise).then((m) => {
-                    if (!m.deleted) {
-                        m.unpin();
-                        m.fetch(true);
-                        m.delete();
-                    }
-                })
-            });
-            
-            const deletePromise = PrivateLobby.deleteOne({ creator: userId });
-            Promise.resolve(deletePromise).then(() => {});
-        }
-    }).catch(() => {});
+  const privateLobbyPromise = PrivateLobby.findOne({ creator: userId });
+
+  privateLobbyPromise.then((privateLobby) => {
+    if (privateLobby) {
+      channel.messages.fetch(privateLobby.message).then((m) => {
+        m.delete();
+      }).catch(() => {});
+
+      PrivateLobby.deleteOne({ creator: userId }).exec();
+    }
+  }).catch(() => {});
 }
 
 module.exports = deletePrivateLobbyByUser;

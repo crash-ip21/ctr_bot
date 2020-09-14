@@ -51,36 +51,48 @@ module.exports = {
     const fieldsOut = fields.map((f) => `**${f.name}**\n${f.value}`);
     const staffOut = staffFields.map((p) => `**${p.name}**\n${p.value}`);
 
-    message.channel.send({
-      embed: {
-        title: 'Help',
-        fields: [
-          ...fields,
-          {
-            name: 'Created by',
-            value: '<@548878570722820097>',
-          }],
-      },
-    })
-      .then((helpMessage) => {
-        if (staffOut.length) {
+    message.member.user.createDM()
+    .then((dm) => {
+      dm.send({
+        embed: {
+          title: 'Help',
+          fields: [
+            ...fields,
+            {
+              name: 'Created by',
+              value: '<@548878570722820097>',
+            }
+          ]
+        }
+      }).catch(() => {
+        message.channel.send({
+          embed: {
+            title: 'Help',
+            fields: [
+              ...fields,
+              {
+                name: 'Created by',
+                value: '<@548878570722820097>',
+              }],
+          },
+        })
+      });
+      
+      if (staffOut.length) {
+        dm.send({
+          embed: {
+            title: 'Staff Help',
+            fields: staffFields,
+          }
+        }).catch(() => {
           message.channel.send({
             embed: {
               title: 'Staff Help',
               fields: staffFields,
             },
           });
-        }
-
-        message.channel
-          .awaitMessages((m) => m.author.id === message.author.id, { max: 1, time: 60000, errors: ['time'] })
-          .then((collected) => {
-            const { content } = collected.first();
-            if (content.toLowerCase().startsWith('thank')) {
-              helpMessage.delete();
-              message.channel.send('You are welcome.');
-            }
-          });
-      });
-  },
+        });
+      }
+    })
+  }
 };

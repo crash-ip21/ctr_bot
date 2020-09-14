@@ -33,14 +33,6 @@ module.exports = {
         return;
       }
 
-      const permissions = command.permissions ? command.permissions.join(', ') : 'EVERYONE';
-
-      const permLength = command.permissions && command.permissions.length > 1;
-
-      const permissionsText = member && member.roles.cache.find((r) => r.name === 'Admin')
-        ? `\nPermission${permLength ? 's' : ''}: \`${permissions}\``
-        : '';
-
       fields.push({
         name: commandName,
         value: `*${description}*`,
@@ -48,51 +40,39 @@ module.exports = {
       });
     });
 
-    const fieldsOut = fields.map((f) => `**${f.name}**\n${f.value}`);
-    const staffOut = staffFields.map((p) => `**${p.name}**\n${p.value}`);
+    const output = {
+      embed: {
+        title: 'Help',
+        fields: [
+          ...fields,
+          {
+            name: 'Created by',
+            value: '<@548878570722820097>',
+          },
+        ],
+      },
+    };
+
+    const staffOutput = {
+      embed: {
+        title: 'Staff Help',
+        fields: staffFields,
+      },
+    };
 
     message.member.user.createDM()
-    .then((dm) => {
-      dm.send({
-        embed: {
-          title: 'Help',
-          fields: [
-            ...fields,
-            {
-              name: 'Created by',
-              value: '<@548878570722820097>',
-            }
-          ]
-        }
-      }).catch(() => {
-        message.channel.send({
-          embed: {
-            title: 'Help',
-            fields: [
-              ...fields,
-              {
-                name: 'Created by',
-                value: '<@548878570722820097>',
-              }],
-          },
-        })
-      });
-      
-      if (staffOut.length) {
-        dm.send({
-          embed: {
-            title: 'Staff Help',
-            fields: staffFields,
-          }
-        }).catch(() => {
-          message.channel.send({
-            embed: {
-              title: 'Staff Help',
-              fields: staffFields,
-            },
+      .then((dm) => {
+        dm.send(output)
+          .catch(() => {
+            message.channel.send(output);
           });
-        });
-      }
-    })
-  }
+
+        if (staffFields.length) {
+          dm.send(staffOutput)
+            .catch(() => {
+              message.channel.send(staffOutput);
+            });
+        }
+      });
+  },
 };

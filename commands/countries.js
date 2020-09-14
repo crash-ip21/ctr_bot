@@ -15,13 +15,13 @@ function getEmbed(flag, players, maxPlayers, page, pages) {
     fields: [
       {
         name: `Players from ${flag} (${maxPlayers})`,
-        value: players.join('\n')
-      }
+        value: players.join('\n'),
+      },
     ],
     footer: {
-      text: `Page ${page} of ${pages}`
-    }
-  }
+      text: `Page ${page} of ${pages}`,
+    },
+  };
 }
 
 module.exports = {
@@ -62,50 +62,50 @@ module.exports = {
           if (players.length <= 0) {
             return message.channel.send(`There are no players from ${flag}.`);
           }
-          
+
           players = players.filter((p) => members.has(p.discordId)).map((p) => `<@${p.discordId}>`);
-          
+
           const elementsPerPage = 20;
           let page = 1;
           let pagination = createPagination(players, page, elementsPerPage);
           let embed = getEmbed(flag, pagination.elements, players.length, page, pagination.pages);
-          
-          message.channel.send({ embed: embed }).then((m) => {
+
+          message.channel.send({ embed }).then((m) => {
             if (pagination.pages > 1) {
               m.react('⬅️');
               m.react('➡️');
-              
+
               // only the user that executed the command can react
               const filter = (r, u) => (['⬅️', '➡️'].includes(r.emoji.name) && u.id !== m.author.id && u.id === message.author.id);
               const options = {
                 time: 3600000,
                 errors: ['time'],
-                dispose: true
-              }
-              
+                dispose: true,
+              };
+
               const collector = m.createReactionCollector(filter, options);
               collector.on('collect', (reaction, user) => {
                 if (reaction.message.id === m.id) {
                   if (reaction.emoji.name === '⬅️') {
-                    page--;
-                    
+                    page -= 1;
+
                     if (page < 1) {
                       page = 1;
                     }
                   }
-                  
+
                   if (reaction.emoji.name === '➡️') {
-                    page++;
-                    
+                    page += 1;
+
                     if (page > pagination.pages) {
                       page = pagination.pages;
                     }
                   }
-                  
+
                   pagination = createPagination(players, page, elementsPerPage);
                   embed = getEmbed(flag, pagination.elements, players.length, page, pagination.pages);
-                  
-                  m.edit({ embed: embed });
+
+                  m.edit({ embed });
                 }
               });
             }

@@ -64,7 +64,8 @@ module.exports = {
           let pagination = createPagination(players, page, elementsPerPage);
           let output = getOutput(flag, pagination.elements, players.length, page, pagination.pages);
 
-          message.channel.send(output).then((m) => {
+          message.channel.send('...').then((m) => {
+            m.edit(output);
             if (pagination.pages > 1) {
               m.react('⬅️');
               m.react('➡️');

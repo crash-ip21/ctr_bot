@@ -18,7 +18,7 @@ function getEmbed(info, players, psns, description, created) {
   if (players.length <= 0) {
     players = ['No players yet'];
   }
-  
+
   if (psns.length <= 0) {
     psns = ['No players yet'];
   }
@@ -44,7 +44,7 @@ function getEmbed(info, players, psns, description, created) {
         name: 'PSNs',
         value: psns.join('\n'),
         inline: true,
-      }
+      },
     ],
     footer: {
       text: `Created at ${created}`,
@@ -171,21 +171,21 @@ Example usage: !private_lobby FFA 8.\`\`\``);
           collector.on('collect', (reaction, user) => {
             if (user.id !== m.author.id && players.length < maxPlayers) {
               players.push(`<@${user.id}>`);
-              
+
               Player.findOne({ discordId: user.id }).then((p) => {
                 if (!p.psn) {
                   psns.push('---');
                 } else {
                   psns.push(p.psn);
                 }
-                
+
                 if (players.length >= maxPlayers) {
                   embed = getEmbed(info, players, psns, closedDescription, created);
                 } else {
                   embed = getEmbed(info, players, psns, defaultDescription, created);
                 }
-                
-                m.edit({ embed })
+
+                m.edit({ embed });
                 updatePrivateLobby(privateLobby, players, psns, message.member.user.id);
               });
             }

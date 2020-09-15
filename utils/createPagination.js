@@ -23,11 +23,11 @@ function createPagination(elements, currentPage, elementsPerPage) {
   const slicedElements = elements.slice(offset, limit);
 
   return {
-    numPages    : numPages,
-    offset      : offset,
-    limit       : limit,
-    elements    : slicedElements,
-    currentPage : currentPage
+    numPages,
+    offset,
+    limit,
+    elements: slicedElements,
+    currentPage,
   };
 }
 

@@ -56,15 +56,15 @@ module.exports = {
           if (players.length <= 0) {
             return message.channel.send(`There are no players from ${flag}.`);
           }
-  
+
           players = players.filter((p) => members.has(p.discordId)).map((p) => `<@${p.discordId}>`);
-  
+
           createPageableContent(message.channel, message.author.id, {
-            outputType                : 'text',
-            elements                  : players,
-            elementsPerPage           : 20,
-            textOptions               : { heading: `Players from ${flag} (${players.length})` },
-            reactionCollectorOptions  : { time: 3600000 }
+            outputType: 'text',
+            elements: players,
+            elementsPerPage: 20,
+            textOptions: { heading: `Players from ${flag} (${players.length})` },
+            reactionCollectorOptions: { time: 3600000 },
           });
         });
       }

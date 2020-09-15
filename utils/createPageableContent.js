@@ -1,4 +1,4 @@
-const createPagination = require('../utils/createPagination');
+const createPagination = require('./createPagination');
 
 /**
  * Returns the text output
@@ -29,11 +29,11 @@ ${options.elements.join('\n')}
  * @returns {{footer: {text: string}, fields: [{name: *, value: *}]}}
  */
 function getEmbed(options) {
-  options.heading       = options.heading || 'Heading';
-  options.elements      = options.elements || ['No data'];
-  options.currentPage   = options.currentPage || 1;
-  options.numPages      = options.numPages || 1;
-  
+  options.heading = options.heading || 'Heading';
+  options.elements = options.elements || ['No data'];
+  options.currentPage = options.currentPage || 1;
+  options.numPages = options.numPages || 1;
+
   return {
     fields: [
       {
@@ -55,30 +55,30 @@ function getEmbed(options) {
 function getMessageContent(options, pagination) {
   let placeholder;
   let content;
-  
+
   if (options.outputType === 'embed') {
     const output = getEmbed({
-      heading     : options.embedOptions.heading,
-      elements    : pagination.elements,
-      currentPage : pagination.currentPage,
-      numPages    : pagination.numPages
+      heading: options.embedOptions.heading,
+      elements: pagination.elements,
+      currentPage: pagination.currentPage,
+      numPages: pagination.numPages,
     });
-    
+
     placeholder = { embed: output };
     content = { embed: output };
   } else {
     placeholder = '...';
     content = getText({
-      heading     : options.textOptions.heading,
-      elements    : pagination.elements,
-      currentPage : pagination.currentPage,
-      numPages    : pagination.numPages
+      heading: options.textOptions.heading,
+      elements: pagination.elements,
+      currentPage: pagination.currentPage,
+      numPages: pagination.numPages,
     });
   }
-  
+
   return {
-    placeholder   : placeholder,
-    content       : content
+    placeholder,
+    content,
   };
 }
 
@@ -105,28 +105,28 @@ function getMessageContent(options, pagination) {
  * @param options
  */
 function createPageableContent(channel, userId, options) {
-  options.outputType                = options.outputType || 'text';
-  options.elements                  = options.elements || [];
-  options.elementsPerPage           = options.elementsPerPage || 10;
-  options.emojiPrevious             = options.emojiPrevious || '⬅️';
-  options.emojiNext                 = options.emojiNext || '➡️';
-  options.embedOptions              = options.embedOptions || { heading: 'Heading' };
-  options.textOptions               = options.textOptions || { heading: 'Heading' };
-  options.reactionCollectorOptions  = options.reactionCollectorOptions || { time: 3600000 };
-  
+  options.outputType = options.outputType || 'text';
+  options.elements = options.elements || [];
+  options.elementsPerPage = options.elementsPerPage || 10;
+  options.emojiPrevious = options.emojiPrevious || '⬅️';
+  options.emojiNext = options.emojiNext || '➡️';
+  options.embedOptions = options.embedOptions || { heading: 'Heading' };
+  options.textOptions = options.textOptions || { heading: 'Heading' };
+  options.reactionCollectorOptions = options.reactionCollectorOptions || { time: 3600000 };
+
   let currentPage = 1;
   let pagination = createPagination(options.elements, 1, options.elementsPerPage);
   let messageContent = getMessageContent(options, pagination);
-  
+
   channel.send(messageContent.placeholder).then((message) => {
     if (options.outputType === 'text') {
       message.edit(messageContent.content);
     }
-    
+
     if (pagination.numPages > 1) {
       message.react(options.emojiPrevious);
       message.react(options.emojiNext);
-      
+
       // only the user that executed the command can react
       const reactionCollectorFilter = (reaction, user) => ([options.emojiPrevious, options.emojiNext].includes(reaction.emoji.name) && user.id !== message.author.id && user.id === userId);
       const reactionCollectorOptions = {
@@ -134,32 +134,32 @@ function createPageableContent(channel, userId, options) {
         errors: ['time'],
         dispose: true,
       };
-      
+
       const reactionCollector = message.createReactionCollector(reactionCollectorFilter, reactionCollectorOptions);
       reactionCollector.on('collect', (reaction, user) => {
         if (reaction.message.id === message.id) {
           if (reaction.emoji.name === options.emojiPrevious) {
             currentPage -= 1;
-            
+
             if (currentPage < 1) {
               currentPage = 1;
             }
           }
-          
+
           if (reaction.emoji.name === options.emojiNext) {
             currentPage += 1;
-            
+
             if (currentPage > pagination.numPages) {
               currentPage = pagination.numPages;
             }
           }
-          
+
           pagination = createPagination(options.elements, currentPage, options.elementsPerPage);
           messageContent = getMessageContent(options, pagination);
-          
+
           message.edit(messageContent.content);
         }
-        
+
         reaction.users.remove(user);
       });
     }

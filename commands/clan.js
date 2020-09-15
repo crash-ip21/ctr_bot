@@ -48,15 +48,13 @@ Edit clans:
 
           const clanList = clansObjects
             .sort((a, b) => b.size - a.size)
-            .map((c) => `${c.shortName}: **${c.fullName}** (${c.size} members)`)
-          ;
-          
+            .map((c) => `${c.shortName}: **${c.fullName}** (${c.size} members)`);
           createPageableContent(message.channel, message.author.id, {
-            outputType                : 'embed',
-            elements                  : clanList,
-            elementsPerPage           : 20,
-            embedOptions              : { heading: `Clans (${clanList.length})` },
-            reactionCollectorOptions  : { time: 3600000 }
+            outputType: 'embed',
+            elements: clanList,
+            elementsPerPage: 20,
+            embedOptions: { heading: `Clans (${clanList.length})` },
+            reactionCollectorOptions: { time: 3600000 },
           });
         });
       });

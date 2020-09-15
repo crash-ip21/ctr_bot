@@ -10,6 +10,7 @@ const PrivateLobby = new Schema({
   mode: String,
   maxPlayers: Number,
   players: [String],
+  psns: [String],
   date: String,
 });
 

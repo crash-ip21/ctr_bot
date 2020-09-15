@@ -1,5 +1,5 @@
 const Player = require('../db/models/player');
-const createPaginableContent = require('../utils/createPaginableContent');
+const createPageableContent = require('../utils/createPageableContent');
 
 /**
  * Returns the embed
@@ -59,7 +59,7 @@ module.exports = {
   
           players = players.filter((p) => members.has(p.discordId)).map((p) => `<@${p.discordId}>`);
   
-          createPaginableContent(message.channel, message.author.id, {
+          createPageableContent(message.channel, message.author.id, {
             outputType                : 'text',
             elements                  : players,
             elementsPerPage           : 20,

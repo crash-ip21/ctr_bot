@@ -1,6 +1,6 @@
 const Clan = require('../db/models/clans');
 const Player = require('../db/models/player');
-const createPaginableContent = require('../utils/createPaginableContent');
+const createPageableContent = require('../utils/createPageableContent');
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
@@ -51,7 +51,7 @@ Edit clans:
             .map((c) => `${c.shortName}: **${c.fullName}** (${c.size} members)`)
           ;
           
-          createPaginableContent(message.channel, message.author.id, {
+          createPageableContent(message.channel, message.author.id, {
             outputType                : 'embed',
             elements                  : clanList,
             elementsPerPage           : 20,

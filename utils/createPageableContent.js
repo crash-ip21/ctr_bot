@@ -104,7 +104,7 @@ function getMessageContent(options, pagination) {
  * @param userId
  * @param options
  */
-function createPaginableContent(channel, userId, options) {
+function createPageableContent(channel, userId, options) {
   options.outputType                = options.outputType || 'text';
   options.elements                  = options.elements || [];
   options.elementsPerPage           = options.elementsPerPage || 10;
@@ -166,4 +166,4 @@ function createPaginableContent(channel, userId, options) {
   });
 }
 
-module.exports = createPaginableContent;
+module.exports = createPageableContent;

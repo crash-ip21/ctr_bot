@@ -1,5 +1,5 @@
 const Player = require('../db/models/player');
-const createPagination = require('../utils/createPagination');
+const createPageableContent = require('../utils/createPageableContent');
 
 /**
  * Returns the embed
@@ -59,52 +59,12 @@ module.exports = {
 
           players = players.filter((p) => members.has(p.discordId)).map((p) => `<@${p.discordId}>`);
 
-          const elementsPerPage = 20;
-          let page = 1;
-          let pagination = createPagination(players, page, elementsPerPage);
-          let output = getOutput(flag, pagination.elements, players.length, page, pagination.pages);
-
-          message.channel.send('...').then((m) => {
-            m.edit(output);
-            if (pagination.pages > 1) {
-              m.react('⬅️');
-              m.react('➡️');
-
-              // only the user that executed the command can react
-              const filter = (r, u) => (['⬅️', '➡️'].includes(r.emoji.name) && u.id !== m.author.id && u.id === message.author.id);
-              const options = {
-                time: 3600000,
-                errors: ['time'],
-                dispose: true,
-              };
-
-              const collector = m.createReactionCollector(filter, options);
-              collector.on('collect', (reaction, user) => {
-                if (reaction.message.id === m.id) {
-                  if (reaction.emoji.name === '⬅️') {
-                    page -= 1;
-
-                    if (page < 1) {
-                      page = 1;
-                    }
-                  }
-
-                  if (reaction.emoji.name === '➡️') {
-                    page += 1;
-
-                    if (page > pagination.pages) {
-                      page = pagination.pages;
-                    }
-                  }
-
-                  pagination = createPagination(players, page, elementsPerPage);
-                  output = getOutput(flag, pagination.elements, players.length, page, pagination.pages);
-
-                  m.edit(output);
-                }
-                reaction.users.remove(user);
-              });
-            }
+          createPageableContent(message.channel, message.author.id, {
+            outputType: 'text',
+            elements: players,
+            elementsPerPage: 20,
+            textOptions: { heading: `Players from ${flag} (${players.length})` },
+            reactionCollectorOptions: { time: 3600000 },
           });
         });
       }

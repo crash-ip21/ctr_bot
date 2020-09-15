@@ -155,7 +155,7 @@ function createPaginableContent(channel, userId, options) {
           }
           
           pagination = createPagination(options.elements, currentPage, options.elementsPerPage);
-          let messageContent = getMessageContent(options, pagination);
+          messageContent = getMessageContent(options, pagination);
           
           message.edit(messageContent.content);
         }

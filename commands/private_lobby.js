@@ -1,20 +1,26 @@
 const Moment = require('moment');
-const deletePrivateLobbyByUser = require('../utils/deletePrivateLobbyByUser');
+const Player = require('../db/models/player');
 const PrivateLobby = require('../db/models/private_lobbies');
+const deletePrivateLobbyByUser = require('../utils/deletePrivateLobbyByUser');
 
 /**
  * Returns the embed for the private lobby
  * @param info
  * @param players
+ * @param psns
  * @param description
  * @param created
  * @returns {{footer: {icon_url: string, text: string}, author: {icon_url: string, name: string}, description: *, fields: [{inline: boolean, name: string, value: *}, {inline: boolean, name: string, value: string}]}}
  */
-function getEmbed(info, players, description, created) {
+function getEmbed(info, players, psns, description, created) {
   const icon = 'https://vignette.wikia.nocookie.net/crashban/images/e/eb/CTRNF-%3F_Crate_Iron_Checkpoint_Crate_icon.png';
 
   if (players.length <= 0) {
     players = ['No players yet'];
+  }
+
+  if (psns.length <= 0) {
+    psns = ['No players yet'];
   }
 
   return {
@@ -34,6 +40,11 @@ function getEmbed(info, players, description, created) {
         value: players.join('\n'),
         inline: true,
       },
+      {
+        name: 'PSNs',
+        value: psns.join('\n'),
+        inline: true,
+      },
     ],
     footer: {
       text: `Created at ${created}`,
@@ -46,10 +57,11 @@ function getEmbed(info, players, description, created) {
  * Updates a private lobby with the given players
  * @param privateLobby
  * @param players
+ * @param psns
  * @param userId
  */
-function updatePrivateLobby(privateLobby, players, userId) {
-  privateLobby.updateOne({ creator: userId }, { players }).exec();
+function updatePrivateLobby(privateLobby, players, psns, userId) {
+  privateLobby.updateOne({ creator: userId }, { players, psns }).exec();
 }
 
 module.exports = {
@@ -120,6 +132,7 @@ Example usage: !private_lobby FFA 8.\`\`\``);
         const maxPlayers = args[1] || 8;
         const created = Moment().format('hh:mm:ss a');
         const players = [];
+        const psns = [];
 
         const info = [
           `Creator: **${author}**`,
@@ -127,7 +140,7 @@ Example usage: !private_lobby FFA 8.\`\`\``);
           `Players: **${maxPlayers}**`,
         ];
 
-        let embed = getEmbed(info, players, defaultDescription, created);
+        let embed = getEmbed(info, players, psns, defaultDescription, created);
 
         message.channel.send({ embed }).then((m) => {
           m.react('✅');
@@ -148,7 +161,7 @@ Example usage: !private_lobby FFA 8.\`\`\``);
 
           const filter = (r, u) => (['✅'].includes(r.emoji.name) && u.id !== m.author.id);
           const options = {
-            max: maxPlayers,
+            max: maxPlayers + 1,
             time: 3600000,
             errors: ['time'],
             dispose: true,
@@ -156,34 +169,39 @@ Example usage: !private_lobby FFA 8.\`\`\``);
 
           const collector = m.createReactionCollector(filter, options);
           collector.on('collect', (reaction, user) => {
-            if (reaction.message.id === m.id) {
-              if (reaction.users.cache.size < maxPlayers) {
-                if (user.id !== m.author.id) {
-                  players.push(`<@${user.id}>`);
+            if (user.id !== m.author.id && players.length < maxPlayers) {
+              players.push(`<@${user.id}>`);
+
+              Player.findOne({ discordId: user.id }).then((p) => {
+                if (!p.psn) {
+                  psns.push('---');
+                } else {
+                  psns.push(p.psn);
                 }
 
-                embed = getEmbed(info, players, defaultDescription, created);
-              } else {
-                embed = getEmbed(info, players, closedDescription, created);
-              }
+                if (players.length >= maxPlayers) {
+                  embed = getEmbed(info, players, psns, closedDescription, created);
+                } else {
+                  embed = getEmbed(info, players, psns, defaultDescription, created);
+                }
 
-              m.edit({ embed });
-              updatePrivateLobby(privateLobby, players, message.member.user.id);
+                m.edit({ embed });
+                updatePrivateLobby(privateLobby, players, psns, message.member.user.id);
+              });
             }
           });
 
           collector.on('remove', ((reaction, user) => {
-            if (reaction.message.id === m.id) {
-              players.forEach((v, i) => {
-                if (v === `<@${user.id}>`) {
-                  players.splice(i, 1);
-                }
-              });
+            players.forEach((v, i) => {
+              if (v === `<@${user.id}>`) {
+                players.splice(i, 1);
+                psns.splice(i, 1);
+              }
+            });
 
-              embed = getEmbed(info, players, defaultDescription, created);
-              m.edit({ embed });
-              updatePrivateLobby(privateLobby, players, message.member.user.id);
-            }
+            embed = getEmbed(info, players, psns, defaultDescription, created);
+            m.edit({ embed });
+            updatePrivateLobby(privateLobby, players, psns, message.member.user.id);
           }));
 
           collector.on('end', () => {

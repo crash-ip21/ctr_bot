@@ -1,5 +1,6 @@
 const moment = require('moment');
 const Ban = require('../db/models/bans');
+const createPageableContent = require('../utils/createPageableContent');
 
 module.exports = {
   name: 'bans',
@@ -26,7 +27,12 @@ module.exports = {
           list.push(item.join(' | '));
         }
 
-        message.channel.send(`**${banned.size} users are banned:**\n\`\`\`${list.join('\n')}\`\`\``);
+        createPageableContent(message.channel, message.author.id, {
+          outputType: 'embed',
+          elements: list,
+          elementsPerPage: 10,
+          embedOptions: { heading: `${banned.size} users are banned` },
+        });
       })
       .catch(console.error);
   },

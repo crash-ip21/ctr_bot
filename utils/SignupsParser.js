@@ -153,6 +153,7 @@ function parse2v2Signup(message) {
   console.log(data);
   return data;
 }
+
 parse2v2Signup.prototype.template = `Team Name: Template Team
 PSN 1: ctr_tourney_bot
 PSN 2: ctr_tourney_bot_2
@@ -457,6 +458,7 @@ function parseRandomSignup(message) {
   const data = {
     authorId: null,
     authorTag: null,
+    captain: null,
     psn: null,
     host: null,
     ps4vc: null,
@@ -480,20 +482,27 @@ function parseRandomSignup(message) {
         data.psn = value;
         break;
       case 1:
+        value = getRowValue(row, /captain/i);
+        if (!value) return false;
+        value = value.toLowerCase();
+        if (!['yes', 'no'].includes(value)) return false;
+        data.captain = value === 'yes';
+        break;
+      case 2:
         value = getRowValue(row, /ps4 vc/i);
         if (!value) return false;
         value = value.toLowerCase();
         if (!['yes', 'no'].includes(value)) return false;
         data.ps4vc = value === 'yes';
         break;
-      case 2:
+      case 3:
         value = getRowValue(row, /discord vc/i);
         if (!value) return false;
         value = value.toLowerCase();
         if (!['yes', 'no'].includes(value)) return false;
         data.discordvc = value === 'yes';
         break;
-      case 3:
+      case 4:
         value = getRowValue(row, /host/i);
         if (!value) return false;
         value = value.toLowerCase();
@@ -520,6 +529,7 @@ function parseRandomSignup(message) {
 }
 
 parseRandomSignup.prototype.template = `PSN: ctr_tourney_bot
+Captain: yes
 PS4 VC: no
 Discord VC: yes
 Host: yes`;
@@ -611,6 +621,7 @@ function parseFFASignup(message) {
 
   return data;
 }
+
 parseFFASignup.prototype.fields = fieldsFFA;
 parseFFASignup.prototype.template = `PSN: ctr_tourney_bot
 host: yes`;
@@ -724,6 +735,7 @@ function parseWCSignup(message) {
 
   return data;
 }
+
 parseWCSignup.prototype.fields = fieldsWC;
 parseWCSignup.prototype.template = `PSN: ctr_tourney_bot
 country: 🌐`;

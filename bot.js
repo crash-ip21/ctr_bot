@@ -16,7 +16,7 @@ const Command = require('./db/models/command');
 const Config = require('./db/models/config');
 const sendLogMessage = require('./utils/sendLogMessage');
 const { parseWCSignup, parseAndCheckUnique } = require('./utils/SignupsParser');
-const { parseFFASignup: parseSignup } = require('./utils/SignupsParser');
+const { parseRandomSignup: parseSignup } = require('./utils/SignupsParser');
 const { flags } = require('./utils/flags');
 const Mute = require('./db/models/mutes');
 
@@ -249,7 +249,7 @@ client.on('messageUpdate', (oldMessage, message) => {
   if (!message) return;
 
   try {
-    if (message.channel && message.channel.name.includes('signups')) {
+    if (message.channel && message.channel.name && message.channel.name.includes('signups')) {
       reactOnSignUp(message); // update
       const msg = `Signup by ${message.author} was edited
 

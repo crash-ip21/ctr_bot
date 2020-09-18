@@ -15,7 +15,7 @@ const teams = ['A', 'B', 'C', 'D'];
 const colors = ['#189dfe', '#ff0000', '#7fff00', '#fff000'];
 
 async function generateTemplateFFA(players, doc, maps = 8) {
-  const title = `${doc.duos ? '#title Match #' : `Match # - ${doc.items ? 'Items' : 'Itemless'} FFA`}\n`;
+  const title = `${doc.duos ? '#title Match #' : `Match # - ${doc.battle ? 'Battle Mode' : doc.items ? 'Items FFA' : 'Itemless FFA'}`}\n`;
 
   const rows = [];
   const points = `${Array(maps).fill(0).join('|')}`;

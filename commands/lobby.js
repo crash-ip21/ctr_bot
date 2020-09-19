@@ -516,16 +516,21 @@ function confirmLobbyStart(doc, message, override = false) {
   }
 
   const playersCount = doc.players.length;
-  if (!override && doc.isItems() && playersCount < 6) {
+
+  if (!override && doc.is4v4() && playersCount < 8) {
+    return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot force start 4v4 lobby.`);
+  }
+
+  if (!override && doc.isItemless() && playersCount < 4) {
+    return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start itemless lobby with less than 4 players.`);
+  }
+
+  if (!override && !doc.isItemless() && !doc.isBattle() && playersCount < 6) {
     return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start item lobby with less than 6 players.`);
   }
 
   if (doc.isDuos() && playersCount % 2 !== 0) {
     return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start Duos lobby with player count not divisible by 2.`);
-  }
-
-  if (!override && !doc.isItems() && !doc.isBattle() && playersCount < 4) {
-    return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start itemless lobby with less than 4 players.`);
   }
 
   if (!override && doc.isBattle() && playersCount < 2) {

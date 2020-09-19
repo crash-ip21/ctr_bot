@@ -11,6 +11,7 @@ module.exports = {
     const channels = [
       'war-search',
       'private-lobbies',
+      'private-lobby-chat',
       'ranked-announcements',
       'results-items',
       'results-itemless',

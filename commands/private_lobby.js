@@ -64,6 +64,20 @@ function updatePrivateLobby(privateLobby, players, psns, userId) {
   privateLobby.updateOne({ creator: userId }, { players, psns }).exec();
 }
 
+/**
+ * Removes the "message pinned" message
+ * @param channel
+ */
+function removePinMessages(channel) {
+  channel.messages.fetch().then((messages) => {
+    messages.forEach((m) => {
+      if (m.type === 'PINS_ADD') {
+        m.delete();
+      }
+    });
+  });
+}
+
 module.exports = {
   name: 'private_lobby',
   description: 'Create a new private lobby. Usage: `!private_lobby [mode] [players]',
@@ -72,8 +86,10 @@ module.exports = {
   execute(message, args) {
     const allowedChannels = [
       message.channel.guild.channels.cache.find((c) => c.name.toLowerCase() === 'war-search'),
-      message.channel.guild.channels.cache.find((c) => c.name.toLowerCase() === 'private-lobbies'),
+      message.channel.guild.channels.cache.find((c) => c.name.toLowerCase() === 'private-lobby-chat'),
     ];
+
+    const postChannel = message.channel.guild.channels.cache.find((c) => c.name.toLowerCase() === 'private-lobbies');
 
     if (!allowedChannels.find((c) => c && c.name === message.channel.name)) {
       return message.channel.send(`This command can only be used in the following channels:
@@ -110,7 +126,9 @@ Example usage: !private_lobby FFA 8.\`\`\``);
           return message.channel.send('You have not started a private lobby.');
         }
 
-        deletePrivateLobbyByUser(message.channel, message.member.user.id);
+        deletePrivateLobbyByUser(postChannel, message.member.user.id);
+        removePinMessages(postChannel);
+
         message.channel.send('Your private lobby was removed.');
       });
     } else {
@@ -142,7 +160,7 @@ Example usage: !private_lobby FFA 8.\`\`\``);
 
         let embed = getEmbed(info, players, psns, defaultDescription, created);
 
-        message.channel.send({ embed }).then((m) => {
+        postChannel.send({ embed }).then((m) => {
           m.react('✅');
           m.pin();
 
@@ -208,6 +226,8 @@ Example usage: !private_lobby FFA 8.\`\`\``);
             deletePrivateLobbyByUser(message.channel, message.member.user.id);
           });
         });
+
+        message.channel.send('Your private lobby was created.');
       });
     }
   },

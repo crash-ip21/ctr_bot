@@ -2,20 +2,23 @@ const axios = require('axios');
 const moment = require('moment');
 const { CronJob } = require('cron');
 const AsyncLock = require('async-lock');
+const {
+  _4V4, BATTLE, DUOS, ITEMLESS, ITEMS,
+} = require('../db/models/ranked_lobbies');
+const RankedLobby = require('../db/models/ranked_lobbies').default;
 const Duo = require('../db/models/duos');
+const Team = require('../db/models/teams');
 const Player = require('../db/models/player');
 const Rank = require('../db/models/rank');
-const Lobby = require('../db/models/lobbies');
 const Room = require('../db/models/rooms');
 const Sequence = require('../db/models/sequences');
 const Counter = require('../db/models/counters');
 const Cooldown = require('../db/models/cooldowns');
 const RankedBan = require('../db/models/ranked_bans');
 const { client } = require('../bot');
-const rngPoolFFa = require('../utils/rngPoolFFa');
+const rngPools = require('../utils/rngPools');
 const rngModeBattle = require('../utils/rngModeBattle');
-const rngPoolBattle = require('../utils/rngPoolBattle');
-const generateTemplateFFA = require('../utils/generateTemplateFFA');
+const generateTemplate = require('../utils/generateTemplate');
 const { parseData } = require('../table');
 const sendLogMessage = require('../utils/sendLogMessage');
 const config = require('../config.js');
@@ -23,36 +26,93 @@ const config = require('../config.js');
 const lock = new AsyncLock();
 
 function getTitle(doc) {
-  return `${doc.locked.$isEmpty() ? '' : 'Locked '}${doc.battle ? 'Battle Mode' : doc.duos ? 'Duos' : doc.items ? 'Item' : 'Itemless'} Lobby${!doc.battle ? doc.pools ? ' (pools)' : ' (full rng)' : ''}`;
+  let title = '';
+
+  if (!doc.locked.$isEmpty()) {
+    title = 'Locked ';
+  }
+
+  switch (doc.type) {
+    case ITEMS:
+      title += 'Item';
+      break;
+    case ITEMLESS:
+      title += 'Itemless';
+      break;
+    case DUOS:
+      title += 'Duos';
+      break;
+    case BATTLE:
+      title += 'Battle';
+      break;
+    case _4V4:
+      title += '4v4';
+      break;
+    default:
+      break;
+  }
+
+  title += ' Lobby';
+
+  if (doc.pools && doc.type !== DUOS) {
+    title += ' (pools)';
+  } else {
+    title += ' (full rng)';
+  }
+
+  return title;
 }
 
 function getFooter(doc) {
   return { text: `id: ${doc._id}` };
 }
 
-const itemsIcon = 'https://vignette.wikia.nocookie.net/crashban/images/3/32/CTRNF-BowlingBomb.png';
-const itemlessIcon = 'https://vignette.wikia.nocookie.net/crashban/images/9/96/NF_Champion_Wheels.png';
-const duosIcon = 'https://vignette.wikia.nocookie.net/crashban/images/8/83/CTRNF-AkuUka.png';
-const battleIcon = 'https://vignette.wikia.nocookie.net/crashban/images/9/97/CTRNF-Invisibility.png';
+const icons = {
+  [ITEMS]: 'https://vignette.wikia.nocookie.net/crashban/images/3/32/CTRNF-BowlingBomb.png',
+  [ITEMLESS]: 'https://vignette.wikia.nocookie.net/crashban/images/9/96/NF_Champion_Wheels.png',
+  [DUOS]: 'https://vignette.wikia.nocookie.net/crashban/images/8/83/CTRNF-AkuUka.png',
+  [BATTLE]: 'https://vignette.wikia.nocookie.net/crashban/images/9/97/CTRNF-Invisibility.png',
+  // [_4V4]: 'https://vignette.wikia.nocookie.net/crashban/images/1/16/NF_Firehawk_Kart.png',
+  [_4V4]: 'https://i.imgur.com/3dvcaur.png',
+};
+
+const roleNames = {
+  [ITEMS]: 'ranked items',
+  [ITEMLESS]: 'ranked itemless',
+  [DUOS]: 'ranked duos',
+  [BATTLE]: 'ranked battle',
+  [_4V4]: 'ranked 4v4',
+};
 
 const PLAYER_DEFAULT_RANK = 1200;
 const DEFAULT_RANK = PLAYER_DEFAULT_RANK;
 
-async function getPlayerInfo(playerId, items, duos, battle) {
+function getIcon(doc) {
+  return icons[doc.type];
+}
+
+function getRoleName(type) {
+  return roleNames[type];
+}
+
+async function getPlayerInfo(playerId, doc) {
   const p = await Player.findOne({ discordId: playerId });
+  // if (!p) p = { psn: 'UNSET' };
   const rank = await Rank.findOne({ name: p.psn });
   let rankValue = DEFAULT_RANK;
-  if (rank) {
-    rankValue = items ? rank.itemRank : rank.itemlessRank;
-    if (duos) {
-      rankValue = rank.duosRank;
-    }
-    if (battle) {
-      rankValue = rank.battleRank;
-    }
-  }
 
-  rankValue = parseInt(rankValue, 10);
+  const types = {
+    [ITEMS]: 'itemRank',
+    [ITEMLESS]: 'itemlessRank',
+    [DUOS]: 'duosRank',
+    [BATTLE]: 'battleRank',
+    [_4V4]: '4v4Rank',
+  };
+
+  if (rank) {
+    rankValue = rank[types[doc.type]];
+    rankValue = parseInt(rankValue, 10);
+  }
 
   if (!rankValue) {
     rankValue = DEFAULT_RANK;
@@ -81,7 +141,7 @@ async function getEmbed(doc, players, maps, roomChannel) {
     for (const playerId of players) {
       i += 1;
 
-      const [tag, psn, rank] = await getPlayerInfo(playerId, doc.items, doc.duos, doc.battle);
+      const [tag, psn, rank] = await getPlayerInfo(playerId, doc);
 
       ranks.push(rank);
 
@@ -95,10 +155,10 @@ async function getEmbed(doc, players, maps, roomChannel) {
   }
 
   console.log(playersInfo);
-  if (doc.duos && doc.duosList.length) {
+  if (doc.teamList && doc.teamList.length) {
     playersText = '';
     playersText += '**Teams:**\n';
-    doc.duosList.forEach((duo, i) => {
+    doc.teamList.forEach((duo, i) => {
       playersText += `${i + 1}.`;
       duo.forEach((player, k) => {
         console.log(player);
@@ -132,7 +192,7 @@ async function getEmbed(doc, players, maps, roomChannel) {
     };
   }
 
-  const iconUrl = doc.battle ? battleIcon : doc.duos ? duosIcon : doc.items ? itemsIcon : itemlessIcon;
+  const iconUrl = getIcon(doc);
   const timestamp = doc.started ? doc.startedAt : doc.date;
   if (maps) {
     fields = [
@@ -293,6 +353,7 @@ async function findRoomChannel(guildId, n) {
     const roleRankedItems = await findRole(guild, 'Ranked Items');
     const roleRankedItemless = await findRole(guild, 'Ranked Itemless');
     const roleRankedBattle = await findRole(guild, 'Ranked Battle');
+    const roleRanked4v4 = await findRole(guild, 'Ranked 4v4');
 
     channel = await guild.channels.create(channelName, {
       type: 'text',
@@ -304,6 +365,7 @@ async function findRoomChannel(guildId, n) {
     channel.createOverwrite(roleRankedItems, { VIEW_CHANNEL: true });
     channel.createOverwrite(roleRankedItemless, { VIEW_CHANNEL: true });
     channel.createOverwrite(roleRankedBattle, { VIEW_CHANNEL: true });
+    channel.createOverwrite(roleRanked4v4, { VIEW_CHANNEL: true });
     channel.createOverwrite(guild.roles.everyone, { VIEW_CHANNEL: false });
   }
 
@@ -311,86 +373,101 @@ async function findRoomChannel(guildId, n) {
 }
 
 function startLobby(docId) {
-  Lobby.findOneAndUpdate({ _id: docId }, { started: true, startedAt: new Date() }, { new: true })
+  RankedLobby.findOneAndUpdate({ _id: docId }, { started: true, startedAt: new Date() }, { new: true })
     .then((doc) => {
       client.guilds.cache
         .get(doc.guild).channels.cache
         .get(doc.channel).messages
         .fetch(doc.message).then((message) => {
-          if (!doc.battle) {
-            rngPoolFFa(doc.items, doc.pools).then((maps) => {
-              findRoom(doc).then((room) => {
-                findRoomChannel(doc.guild, room.number).then(async (roomChannel) => {
-                  maps = maps.join('\n');
+          rngPools(doc, doc.pools).then((maps) => {
+            findRoom(doc).then((room) => {
+              findRoomChannel(doc.guild, room.number).then(async (roomChannel) => {
+                maps = maps.join('\n');
 
-                  const { players } = doc;
+                const { players } = doc;
 
-                  let playersText = '';
-                  if (doc.duos) {
-                    let playersCopy = [...players];
-                    if (players.length % 2 !== 0) {
-                      throw new Error('Players count is not divisible by 2');
-                    }
-
-                    doc.duosList.forEach((duo) => {
-                      duo.forEach((player) => {
-                        playersCopy = playersCopy.filter((p) => p !== player);
-                      });
-                    });
-
-                    playersCopy = playersCopy.sort(() => Math.random() - 0.5);
-
-                    const randomDuos = [];
-                    for (let i = 0; i < playersCopy.length; i += 1) {
-                      const last = randomDuos[randomDuos.length - 1];
-                      if (!last || last.length === 2) {
-                        randomDuos.push([playersCopy[i]]);
-                      } else {
-                        last.push(playersCopy[i]);
-                      }
-                    }
-
-                    doc.duosList = Array.from(doc.duosList).concat(randomDuos);
-                    doc = await doc.save();
-
-                    playersText += '**Teams:**\n';
-                    doc.duosList.forEach((duo, i) => {
-                      playersText += `${i + 1}.`;
-                      duo.forEach((player, k) => {
-                        playersText += `${k ? '⠀' : ''} <@${player}>\n`;
-                      });
-                    });
-                  } else {
-                    playersText = players.map((u, i) => `${i + 1}. <@${u}>`).join('\n');
+                let playersText = '';
+                if (doc.isTeams()) {
+                  let playersCopy = [...players];
+                  if (players.length % 2 !== 0) {
+                    throw new Error('Players count is not divisible by 2');
                   }
 
-                  const playerDocs = await Player.find({ discordId: { $in: players } });
-                  const [PSNs, templateUrl, template] = await generateTemplateFFA(playerDocs, doc, doc.items ? 8 : 5);
-
-                  message.edit({
-                    embed: await getEmbed(doc, players, maps, roomChannel),
+                  doc.teamList.forEach((team) => {
+                    team.forEach((player) => {
+                      playersCopy = playersCopy.filter((p) => p !== player);
+                    });
                   });
 
-                  // todo add ranks and tags?
-                  roomChannel.send({
-                    content: `**The ${getTitle(doc)} has started**
+                  const shuffledPlayers = playersCopy.sort(() => Math.random() - 0.5);
+
+                  const randomTeams = [];
+                  let teamSize = 0;
+                  if (doc.isDuos()) teamSize = 2;
+                  if (doc.is4v4()) teamSize = 4;
+
+                  for (let i = 0; i < shuffledPlayers.length; i += 1) {
+                    const last = randomTeams[randomTeams.length - 1];
+                    if (!last || last.length === teamSize) {
+                      randomTeams.push([shuffledPlayers[i]]);
+                    } else {
+                      last.push(shuffledPlayers[i]);
+                    }
+                  }
+
+                  doc.teamList = Array.from(doc.teamList).concat(randomTeams);
+                  doc = await doc.save();
+
+                  playersText += '**Teams:**\n';
+                  doc.teamList.forEach((team, i) => {
+                    playersText += `${i + 1}.`;
+                    team.forEach((player, k) => {
+                      playersText += `${k ? '⠀' : ''} <@${player}>\n`;
+                    });
+                  });
+                } else {
+                  playersText = players.map((u, i) => `${i + 1}. <@${u}>`).join('\n');
+                }
+
+                const playerDocs = await Player.find({ discordId: { $in: players } });
+                const [PSNs, templateUrl, template] = await generateTemplate(playerDocs, doc);
+
+                message.edit({
+                  embed: await getEmbed(doc, players, maps, roomChannel),
+                });
+
+                // todo add ranks and tags?
+                const fields = [
+                  {
+                    name: 'Maps',
+                    value: maps,
+                    inline: true,
+                  },
+                  {
+                    name: 'PSNs',
+                    value: PSNs,
+                    inline: true,
+                  },
+                ];
+
+                if (doc.isBattle()) {
+                  const modes = await rngModeBattle();
+
+                  fields.push({
+                    name: 'Modes',
+                    value: modes.join('\n'),
+                    inline: true,
+                  });
+                }
+
+                roomChannel.send({
+                  content: `**The ${getTitle(doc)} has started**
 *Organize your host and scorekeeper*
 Your room is ${roomChannel}.
 Use \`!lobby end\` when your match is done.
 ${playersText}`,
                   embed: {
-                    fields: [
-                      {
-                        name: 'Maps',
-                        value: maps,
-                        inline: true,
-                      },
-                      {
-                        name: 'PSNs',
-                        value: PSNs,
-                        inline: true,
-                      },
-                    ],
+                    fields,
                   },
                 }).then((m) => {
                   roomChannel.messages.fetchPinned().then((pinnedMessages) => {
@@ -398,7 +475,7 @@ ${playersText}`,
                     m.pin();
                   });
 
-                    roomChannel.send({
+                  roomChannel.send({
                     embed: {
                       title: 'Scores Template',
                       description: `\`\`\`${template}\`\`\`
@@ -409,68 +486,14 @@ ${playersText}`,
                   if (maps.includes('Tiger Temple')) {
                     roomChannel.send('Remember: Tiger Temple shortcut is banned! <:feelsbanman:649075198997561356>');
                   }
-                });
-              });
-            });
-          });} else {
-            rngPoolBattle(true).then((maps) => {
-              findRoom(doc).then((room) => {
-                findRoomChannel(doc.guild, room.number).then(async (roomChannel) => {
-                  maps = maps.join('\n');
-                  let modes = (await rngModeBattle(false)).join('\n');
 
-                  const { players } = doc;
-
-                  let playersText = players.map((u, i) => `${i + 1}. <@${u}>`).join('\n');
-
-                  const playerDocs = await Player.find({ discordId: { $in: players } });
-                  const [PSNs, templateUrl] = await generateTemplateFFA(playerDocs, doc, 5);
-
-                  message.edit({
-                    embed: await getEmbed(doc, players, maps, roomChannel),
-                  });
-
-                  roomChannel.send({
-                    content: `**The ${getTitle(doc)} has started**
-*Organize your host and scorekeeper*
-Your room is ${roomChannel}.
-Use \`!lobby end\` when your match is done.
-${playersText}`,
-                    embed: {
-                      fields: [
-                        {
-                          name: 'Maps',
-                          value: maps,
-                          inline: true,
-                        },
-                        {
-                          name: 'PSNs',
-                          value: PSNs,
-                          inline: true,
-                        },
-                        {
-                          name: 'Modes',
-                          value: modes,
-                          inline: true
-                        },
-                        {
-                          name: 'Scorekeepers use this template:',
-                          value: `[Open template on gb.hlorenzi.com](${templateUrl})`,
-                        },
-                      ],
-                    },
-                  }).then((m) => {
-                    roomChannel.messages.fetchPinned().then((pinnedMessages) => {
-                      pinnedMessages.forEach((pinnedMessage) => pinnedMessage.unpin());
-                      m.pin();
-                    });
-
+                  if (doc.isBattle()) {
                     roomChannel.send('You can check the battle mode rules by using `!battle_modes`!');
-                  });
+                  }
                 });
               });
             });
-          }
+          });
         });
     });
 }
@@ -493,20 +516,24 @@ function confirmLobbyStart(doc, message, override = false) {
   }
 
   const playersCount = doc.players.length;
-  if (!override && doc.items && playersCount < 6) {
+  if (!override && doc.isItems() && playersCount < 6) {
     return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start item lobby with less than 6 players.`);
   }
 
-  if (doc.duos && playersCount % 2 !== 0) {
+  if (doc.isDuos() && playersCount % 2 !== 0) {
     return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start Duos lobby with player count not divisible by 2.`);
   }
 
-  if (!override && !doc.items && !doc.battle && playersCount < 4) {
+  if (!override && !doc.isItems() && !doc.isBattle() && playersCount < 4) {
     return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start itemless lobby with less than 4 players.`);
   }
 
-  if (!override && doc.battle && playersCount < 2) {
+  if (!override && doc.isBattle() && playersCount < 2) {
     return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players.\nYou cannot start battle mode lobby with less than 2 players.`);
+  }
+
+  if (override) {
+    return startLobby(doc.id);
   }
 
   return message.channel.send(`Lobby \`${doc.id}\` has ${playersCount} players. Are you sure you want to start it? Say \`yes\` or \`no\`.`)
@@ -534,9 +561,9 @@ function findLobby(lobbyID, isStaff, message, callback) {
     let promise;
 
     if (isStaff) {
-      promise = Lobby.findOne({ _id: lobbyID });
+      promise = RankedLobby.findOne({ _id: lobbyID });
     } else {
-      promise = Lobby.findOne({
+      promise = RankedLobby.findOne({
         $or: [
           { _id: lobbyID, creator: message.author.id },
           { _id: lobbyID, started: true, players: message.author.id },
@@ -554,7 +581,7 @@ function findLobby(lobbyID, isStaff, message, callback) {
       return callback(doc, message);
     });
   } else {
-    Lobby.find({
+    RankedLobby.find({
       $or: [
         { creator: message.author.id },
         { started: true, players: message.author.id },
@@ -653,12 +680,12 @@ module.exports = {
 
     const banned = await RankedBan.findOne({ discordId: user.id, guildId: guild.id });
     if (banned) {
-      return message.reply('You are currently banned from ranked lobbies.');
+      return message.reply('you are currently banned from ranked lobbies.');
     }
 
     const player = await Player.findOne({ discordId: user.id });
     if (!player || !player.psn) {
-      return message.reply('You need to set your PSN first by using `!set_psn`.');
+      return message.reply('you need to set your PSN first by using `!set_psn`.');
     }
 
     const isStaff = member.hasPermission(['MANAGE_CHANNELS', 'MANAGE_ROLES']);
@@ -670,15 +697,16 @@ module.exports = {
     }
 
     if (message.channel.parent && message.channel.parent.name.toLowerCase() !== 'ranked lobbies') {
-      return message.reply('You can use this command only in `Ranked Lobbies` category.');
+      return message.reply('you can use this command only in `Ranked Lobbies` category.');
     }
 
-    switch (action && action.toLowerCase()) {
+    action = action && action.toLowerCase();
+    switch (action) {
       case 'new':
         // eslint-disable-next-line no-case-declarations
-        const creatorsLobby = await Lobby.findOne({ creator: message.author.id });
+        const creatorsLobby = await RankedLobby.findOne({ creator: message.author.id });
         if (creatorsLobby && !isStaff) {
-          return message.reply('You have already created a lobby.');
+          return message.reply('you have already created a lobby.');
         }
 
         const cooldown = await Cooldown.findOne({ guildId: guild.id, discordId: message.author.id, name: 'lobby' });
@@ -686,17 +714,20 @@ module.exports = {
           const updatedAt = moment(cooldown.updatedAt);
           updatedAt.add(30, 'm');
           const wait = moment.duration(now.diff(updatedAt));
-          return message.reply(`You cannot create multiple lobbies in quick succession. You have to wait ${wait.humanize()}.`);
+          return message.reply(`you cannot create multiple lobbies so often. You have to wait ${wait.humanize()}.`);
         }
 
         message.channel.send(`Select lobby mode. Waiting 1 minute.
-0 - Itemless (pools)
+0 - Items (full rng)
 1 - Items (pools)
 2 - Itemless (full rng)
-3 - Items (full rng)
-4 - Duos (pools)
-5 - Duos (full rng)
-6 - Battle Mode (pools)`).then((confirmMessage) => {
+3 - Itemless (pools)
+4 - Duos (full rng)
+5 - Duos (pools)
+6 - 4v4 (full rng)
+7 - 4v4 (pools)
+8 - Battle Mode (full rng)
+`).then((confirmMessage) => {
           message.channel.awaitMessages((m) => m.author.id === message.author.id, {
             max: 1,
             time: 60000,
@@ -706,24 +737,51 @@ module.exports = {
               const collectedMessage = collected.first();
               const { content } = collectedMessage;
               collectedMessage.delete();
-              if (['0', '1', '2', '3', '4', '5', '6'].includes(content)) {
-                const items = ['1', '3', '4', '5'].includes(content);
-                const duos = ['4', '5'].includes(content);
-                const battle = ['6'].includes(content);
 
-                const sameTypeLobby = await Lobby.findOne({
-                  battle, duos, items, started: false, guild: message.guild.id,
+              const choice = parseInt(content, 10);
+              const modes = Array.from(Array(9).keys()); // [0, ..., 8]
+              if (modes.includes(choice)) {
+                let type;
+                switch (choice) {
+                  case 0:
+                  case 1:
+                    type = ITEMS;
+                    break;
+                  case 2:
+                  case 3:
+                    type = ITEMLESS;
+                    break;
+                  case 4:
+                  case 5:
+                    type = DUOS;
+                    break;
+                  case 6:
+                  case 7:
+                    type = _4V4;
+                    break;
+                  case 8:
+                    type = BATTLE;
+                    break;
+                  default:
+                    break;
+                }
+
+                const pools = [1, 3, 5, 7].includes(choice);
+
+                const sameTypeLobby = await RankedLobby.findOne({
+                  started: false, guild: message.guild.id, type,
                 });
 
                 if (sameTypeLobby) {
                   confirmMessage.edit('There is already lobby of this type, are you sure you want to create a new one? (yes / no)');
                   const response = await message.channel
-                    .awaitMessages((m) => m.author.id === message.author.id, { max: 1, time: 60000, errors: ['time'] })
-                    .then((collected) => {
-                      const message1 = collected.first();
-                      const { content } = message1;
-                      message1.delete();
-                      return content.toLowerCase() === 'yes';
+                    .awaitMessages((m) => m.author.id === message.author.id,
+                      { max: 1, time: 60000, errors: ['time'] })
+                    .then((collected2) => {
+                      const message2 = collected2.first();
+                      const content2 = message2.content;
+                      message2.delete();
+                      return content2.toLowerCase() === 'yes';
                     })
                     .catch(() => false);
                   if (!response) {
@@ -731,9 +789,7 @@ module.exports = {
                   }
                 }
 
-                const fromPools = ['0', '1', '4'].includes(content);
-
-                const roleName = `ranked ${battle ? 'battle' : duos ? 'duos' : items ? 'items' : 'itemless'}`;
+                const roleName = getRoleName(type);
                 let role = guild.roles.cache.find((r) => r.name.toLowerCase() === roleName);
                 if (!role) {
                   role = await guild.roles.create({
@@ -742,19 +798,17 @@ module.exports = {
                   });
                 }
 
-                const cooldownDoc = await Cooldown.findOneAndUpdate(
+                await Cooldown.findOneAndUpdate(
                   { guildId: guild.id, discordId: message.author.id, name: 'lobby' },
                   { $inc: { count: 1 }, $set: { updatedAt: now } },
                   { upsert: true, new: true },
                 );
 
-                const lobby = new Lobby();
+                const lobby = new RankedLobby();
                 lobby.guild = guild.id;
                 lobby.creator = message.author.id;
-                lobby.items = items;
-                lobby.duos = duos;
-                lobby.battle = battle;
-                lobby.pools = fromPools;
+                lobby.type = type;
+                lobby.pools = pools;
                 lobby.save().then(async (doc) => {
                   guild.channels.cache.find((c) => c.name === 'ranked-lobbies')
                     .send({
@@ -779,8 +833,8 @@ module.exports = {
         break;
       case 'locked':
         message.channel.send(`Select lobby mode. Waiting 1 minute.
-0 - Items (pools)
-1 - Items (full rng)`).then((confirmMessage) => {
+0 - Items (full rng)
+1 - Items (pools)`).then((confirmMessage) => {
           message.channel.awaitMessages((m) => m.author.id === message.author.id, {
             max: 1,
             time: 60000,
@@ -791,8 +845,8 @@ module.exports = {
               const { content } = collectedMessage;
               collectedMessage.delete();
               if (['0', '1'].includes(content)) {
-                const items = true;
-                const fromPools = content === '0';
+                const type = ITEMS;
+                const pools = content === '1';
 
                 const diffMin = 200;
                 const diffMax = 500;
@@ -816,12 +870,12 @@ The value should be in range: \`${diffMin} - ${diffMax}\`. Defaults to \`${diffD
                       const rank = await Rank.findOne({ name: player.psn });
                       let playerRank = PLAYER_DEFAULT_RANK;
                       if (rank) {
-                        playerRank = items ? rank.itemRank : rank.itemlessRank;
+                        playerRank = type === ITEMS ? rank.itemRank : rank.itemlessRank;
                       }
 
                       collectedMessage2.delete();
 
-                      const roleName = `ranked ${items ? 'items' : 'itemless'}`;
+                      const roleName = `ranked ${type === ITEMS ? 'items' : 'itemless'}`;
                       let role = guild.roles.cache.find((r) => r.name.toLowerCase() === roleName);
                       if (!role) {
                         role = await guild.roles.create({
@@ -830,11 +884,11 @@ The value should be in range: \`${diffMin} - ${diffMax}\`. Defaults to \`${diffD
                         });
                       }
 
-                      const lobby = new Lobby();
+                      const lobby = new RankedLobby();
                       lobby.guild = guild.id;
                       lobby.creator = message.author.id;
-                      lobby.items = items;
-                      lobby.pools = fromPools;
+                      lobby.type = type;
+                      lobby.pools = pools;
                       lobby.locked = {
                         rank: playerRank,
                         shift: rankDiff,
@@ -871,6 +925,7 @@ The value should be in range: \`${diffMin} - ${diffMax}\`. Defaults to \`${diffD
         break;
 
       case 'override':
+      case 'o':
         if (isStaff) {
           findLobby(lobbyID, isStaff, message, (d, m) => confirmLobbyStart(d, m, true));
         } else {
@@ -887,7 +942,8 @@ The value should be in range: \`${diffMin} - ${diffMax}\`. Defaults to \`${diffD
         findLobby(lobbyID, isStaff, message, (doc, msg) => {
           if (doc.started) {
             const minutes = diffMinutes(new Date(), doc.startedAt);
-            if ((doc.items && minutes < 50) || (!doc.items && minutes < 30)) {
+            const confirmationMinutes = doc.isItemless() || doc.isBattle() ? 30 : 50;
+            if (minutes < confirmationMinutes) {
               Room.findOne({ lobby: doc.id }).then((room) => {
                 if (!room) {
                   return deleteLobby(doc, msg);
@@ -900,7 +956,11 @@ The value should be in range: \`${diffMin} - ${diffMax}\`. Defaults to \`${diffD
                     voteMessage.react('✅');
 
                     const filter = (r, u) => ['✅'].includes(r.emoji.name) && doc.players.includes(u.id) && u.id !== message.author.id;
-                    voteMessage.awaitReactions(filter, { max: Math.ceil(doc.players.length / 4), time: 60000, errors: ['time'] })
+                    voteMessage.awaitReactions(filter, {
+                      max: Math.ceil(doc.players.length / 4),
+                      time: 60000,
+                      errors: ['time'],
+                    })
                       .then((collected) => {
                         deleteLobby(doc, msg);
                       })
@@ -917,6 +977,8 @@ The value should be in range: \`${diffMin} - ${diffMax}\`. Defaults to \`${diffD
             return deleteLobby(doc, msg);
           }
         });
+        break;
+      default:
         break;
     }
   },
@@ -990,7 +1052,7 @@ async function mogi(reaction, user, removed = false) {
       rankedGeneral = await guild.channels.create('ranked-general');
     }
 
-    Lobby.findOne(conditions).then(async (doc) => {
+    RankedLobby.findOne(conditions).then(async (doc) => {
       if (doc) {
         if (!removed) {
           tickCount(reaction, user);
@@ -1025,7 +1087,7 @@ async function mogi(reaction, user, removed = false) {
             return rankedGeneral.send(errorMsg).then((m) => m.delete({ timeout: 60000 }));
           }
 
-          const repeatLobby = await Lobby.findOne({ guild: guild.id, players: user.id, _id: { $ne: doc._id } });
+          const repeatLobby = await RankedLobby.findOne({ guild: guild.id, players: user.id, _id: { $ne: doc._id } });
 
           if (repeatLobby) {
             reaction.users.remove(user);
@@ -1039,9 +1101,9 @@ async function mogi(reaction, user, removed = false) {
 
             let playerRank = PLAYER_DEFAULT_RANK;
             if (rank) {
-              playerRank = doc.items ? rank.itemRank : rank.itemlessRank;
+              playerRank = doc.isItems() ? rank.itemRank : rank.itemlessRank;
             }
-            const lockedRank = parseInt(doc.locked.rank, 10);
+            const lockedRank = doc.locked.rank;
             const minRank = lockedRank - doc.locked.shift;
             const maxRank = lockedRank + doc.locked.shift;
             const rankTooLow = playerRank < minRank;
@@ -1055,19 +1117,23 @@ async function mogi(reaction, user, removed = false) {
           }
         }
 
-        lock.acquire(doc._id, async () => Lobby.findOne({ _id: doc._id }).then(async (doc) => {
+        lock.acquire(doc._id, async () => RankedLobby.findOne({ _id: doc._id }).then(async (doc) => {
           console.log(`lock acquire ${doc._id}`);
           let players = Array.from(doc.players);
 
           const playersCount = players.length;
-          if (!removed && ((doc.items && playersCount >= ITEMS_MAX) || (!doc.items && playersCount >= ITEMLESS_MAX))) {
-            return;
+          if (!removed) {
+            if (doc.isItemless() && playersCount >= ITEMLESS_MAX) {
+              return;
+            }
+            if (playersCount >= ITEMS_MAX) {
+              return;
+            }
           }
 
-          let duosList = Array.from(doc.duosList);
-          const { duos } = doc;
+          let teamList = Array.from(doc.teamList);
 
-          if (duos) {
+          if (doc.isDuos()) {
             const userSavedDuo = await Duo.findOne({
               guild: guild.id,
               $or: [{ discord1: user.id }, { discord2: user.id }],
@@ -1077,9 +1143,13 @@ async function mogi(reaction, user, removed = false) {
 
               if (removed) {
                 players = players.filter((p) => p !== user.id && p !== savedPartner);
-                duosList = duosList.filter((p) => !(Array.isArray(p) && p.includes(user.id)));
+                teamList = teamList.filter((p) => !(Array.isArray(p) && p.includes(user.id)));
               } else {
-                const repeatLobbyPartner = await Lobby.findOne({ guild: guild.id, players: savedPartner, _id: { $ne: doc._id } });
+                const repeatLobbyPartner = await RankedLobby.findOne({
+                  guild: guild.id,
+                  players: savedPartner,
+                  _id: { $ne: doc._id },
+                });
 
                 if (repeatLobbyPartner) {
                   reaction.users.remove(user);
@@ -1105,7 +1175,7 @@ async function mogi(reaction, user, removed = false) {
                 //   return;
                 // }
                 if (playersCount === ITEMS_MAX - 1) {
-                  const soloQueue = players.filter((p) => !doc.duosList.flat().includes(p));
+                  const soloQueue = players.filter((p) => !doc.teamList.flat().includes(p));
                   const lastSoloQueuePlayer = soloQueue.pop();
                   players = players.filter((p) => p !== lastSoloQueuePlayer);
                 }
@@ -1113,7 +1183,7 @@ async function mogi(reaction, user, removed = false) {
                 if (!players.includes(user.id) && !players.includes(savedPartner)) {
                   const duo = [user.id, savedPartner];
                   players.push(...duo);
-                  duosList.push(duo);
+                  teamList.push(duo);
                 }
               }
             } else if (removed) {
@@ -1121,6 +1191,58 @@ async function mogi(reaction, user, removed = false) {
             } else if (!players.includes(user.id)) {
               players.push(user.id);
             }
+            doc.teamList = teamList;
+          } else if (doc.is4v4()) {
+            const team = await Team.findOne({
+              guild: guild.id,
+              players: user.id,
+            });
+            if (team) {
+              const teamPlayers = team.players;
+
+              if (removed) {
+                players = players.filter((p) => !teamPlayers.includes(p));
+                teamList = teamList.filter((p) => !(Array.isArray(p) && p.includes(user.id)));
+              } else {
+                const repeatLobbyTeam = await RankedLobby.findOne({
+                  guild: guild.id,
+                  players: { $in: teamPlayers },
+                  _id: { $ne: doc._id },
+                });
+
+                if (repeatLobbyTeam) {
+                  reaction.users.remove(user);
+                  const errorMsg = `${user}, one of your teammates is in another lobby.`;
+                  user.createDM().then((dmChannel) => dmChannel.send(errorMsg));
+                  return rankedGeneral.send(errorMsg).then((m) => m.delete({ timeout: 60000 }));
+                }
+
+                const teammateBanned = await RankedBan.findOne({ discordId: teamPlayers, guildId: guild.id });
+                if (teammateBanned) {
+                  reaction.users.remove(user);
+                  team.delete();
+                  const errorMsg = `${user}, one of your teammates is banned. The team has been deleted.`;
+                  user.createDM().then((dmChannel) => dmChannel.send(errorMsg));
+                  rankedGeneral.send(errorMsg).then((m) => m.delete({ timeout: 60000 }));
+                  return;
+                }
+
+                if (playersCount > 4) {
+                  const soloQueue = players.filter((p) => !doc.teamList.flat().includes(p));
+                  players = players.filter((p) => !soloQueue.includes(p));
+                }
+
+                if (!players.some((p) => teamPlayers.includes(p))) {
+                  players.push(...teamPlayers);
+                  teamList.push(teamPlayers);
+                }
+              }
+            } else if (removed) {
+              players = players.filter((p) => p !== user.id);
+            } else if (!players.includes(user.id)) {
+              players.push(user.id);
+            }
+            doc.teamList = teamList;
           } else if (removed) {
             players = players.filter((p) => p !== user.id);
           } else if (!players.includes(user.id)) {
@@ -1129,14 +1251,10 @@ async function mogi(reaction, user, removed = false) {
 
           doc.players = players;
 
-          if (duos) {
-            doc.duosList = duosList;
-          }
-
           return doc.save().then(async (newDoc) => {
             const count = players.length;
             if (count) {
-              if ((doc.items && count === ITEMS_MAX) || (!doc.items && count === ITEMLESS_MAX)) {
+              if ((doc.isItemless() && count === ITEMLESS_MAX) || (count === ITEMS_MAX)) {
                 startLobby(doc.id);
               } else {
                 message.edit({
@@ -1210,7 +1328,7 @@ client.on('messageDelete', async (message) => {
     message: message.id,
   };
 
-  Lobby.findOne(conditions).then(async (doc) => {
+  RankedLobby.findOne(conditions).then(async (doc) => {
     if (doc) {
       Room.findOne({ lobby: doc.id }).then((room) => {
         if (!room) {
@@ -1247,12 +1365,12 @@ const findRoomAndSendMessage = (doc, ping = false) => {
 };
 
 const checkOldLobbies = () => {
-  Lobby.find({ started: true }).then((docs) => {
+  RankedLobby.find({ started: true }).then((docs) => {
     docs.forEach((doc) => {
       const minutes = diffMinutes(new Date(), doc.startedAt);
 
-      const remindMinutes = doc.items ? [45, 60] : [30, 45];
-      const pingMinutes = doc.items ? [75, 90, 105, 120] : [60, 75, 90, 105, 120];
+      const remindMinutes = doc.isItemless() ? [30, 45] : [45, 60];
+      const pingMinutes = doc.isItemless() ? [60, 75, 90, 105, 120] : [75, 90, 105, 120];
 
       if (remindMinutes.includes(minutes)) {
         findRoomAndSendMessage(doc);
@@ -1262,7 +1380,7 @@ const checkOldLobbies = () => {
     });
   });
 
-  Lobby.find({ started: false }).then((docs) => {
+  RankedLobby.find({ started: false }).then((docs) => {
     docs.forEach(async (doc) => {
       const minutes = diffMinutes(new Date(), doc.date);
 
@@ -1439,7 +1557,7 @@ The scores will look like this:`;
 client.on('ready', () => {
   // todo fetch downtime reactions?
 
-  Lobby.find().then((docs) => {
+  RankedLobby.find().then((docs) => {
     docs.forEach(async (doc) => {
       const guild = client.guilds.cache.get(doc.guild);
       if (!guild) {
@@ -1624,23 +1742,22 @@ Make sure to read the ${rankedRules} and ${rankedGuide} and set your PSN by usin
   }
 });
 
-const duoDuration = moment.duration(3, 'hours');
+const teamDuration = moment.duration(3, 'hours');
 
 function checkOldDuos() {
-  console.log('checkOldDuos');
-  const lte = moment().subtract(duoDuration);
+  const lte = moment().subtract(teamDuration);
   Duo.find({ date: { $lte: lte } })
     .then((duos) => {
       duos.forEach((duo) => {
-        Lobby.findOne({
-          duos: true,
+        RankedLobby.findOne({
+          type: DUOS,
           players: { $in: [duo.discord1, duo.discord2] },
         }).then((activeLobby) => {
           if (!activeLobby) {
             duo.delete().then(() => {
               const guild = client.guilds.cache.get(duo.guild);
               const generalChannel = guild.channels.cache.find((c) => c.name === 'ranked-general');
-              const message = `Duo <@${duo.discord1}> & <@${duo.discord2}> was removed after ${duoDuration.humanize()}.`;
+              const message = `Duo <@${duo.discord1}> & <@${duo.discord2}> was removed after ${teamDuration.humanize()}.`;
               generalChannel.send(message);
             });
           }
@@ -1648,5 +1765,28 @@ function checkOldDuos() {
       });
     });
 }
-
 new CronJob('* * * * *', checkOldDuos).start();
+
+function checkOldTeams() {
+  const lte = moment().subtract(teamDuration);
+  Team.find({ date: { $lte: lte } })
+    .then((teams) => {
+      teams.forEach((team) => {
+        RankedLobby.findOne({
+          type: _4V4,
+          players: { $in: teams.players },
+        }).then((activeLobby) => {
+          if (!activeLobby) {
+            team.delete().then(() => {
+              const guild = client.guilds.cache.get(team.guild);
+              const generalChannel = guild.channels.cache.find((c) => c.name === 'ranked-general');
+              const teamPing = team.players.map((p) => `<@${p}>`).join(', ');
+              const message = `Team ${teamPing} was removed after ${teamDuration.humanize()}.`;
+              generalChannel.send(message);
+            });
+          }
+        });
+      });
+    });
+}
+new CronJob('* * * * *', checkOldTeams).start();

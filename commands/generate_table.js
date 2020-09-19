@@ -16,7 +16,7 @@ Team2: p1,p2,p3
 
     const MAX_RACES = 30;
     if (numOfRaces > MAX_RACES) {
-      message.reply(`Too many races. Max is: ${MAX_RACES}`);
+      message.reply(`too many races. Max is: ${MAX_RACES}`);
       return;
     }
 
@@ -24,7 +24,7 @@ Team2: p1,p2,p3
     rows.shift();
 
     if (!rows.length) {
-      message.reply('You didn\'t provide list of teams');
+      message.reply('you didn\'t provide list of teams');
       return;
     }
 
@@ -57,7 +57,7 @@ Team2: p1,p2,p3
 
     console.log(url.length);
     if (url.length > 1700) {
-      message.reply('Too long template.');
+      message.reply('template is too long.');
       return;
     }
 

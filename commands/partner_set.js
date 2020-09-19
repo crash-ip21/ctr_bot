@@ -1,7 +1,8 @@
 const Duo = require('../db/models/duos');
-const Lobby = require('../db/models/lobbies');
+const RankedLobby = require('../db/models/ranked_lobbies').default;
 const Player = require('../db/models/player');
 const RankedBan = require('../db/models/ranked_bans');
+const { DUOS } = require('../db/models/ranked_lobbies');
 
 module.exports = {
   name: 'partner_set',
@@ -9,7 +10,6 @@ module.exports = {
   guildOnly: true,
   aliases: ['set_partner', 'partner_s'],
   async execute(message) {
-
     if (!message.mentions.members.size) {
       return message.reply('you should tag your partner.');
     }
@@ -62,13 +62,13 @@ module.exports = {
       return message.channel.send('...').then((m) => m.edit(`${author}, ${partner} already has another partner.`));
     }
 
-    const lobby = await Lobby.findOne({ duos: true, players: author.id });
+    const lobby = await RankedLobby.findOne({ type: DUOS, players: author.id });
     if (lobby) {
       return message.reply('you can\'t set a partner while you are in a lobby.');
     }
 
     message.channel.send('...')
-      .then((msg) => msg.edit(`${partner}, please confirm that you are a partner of ${author} for Ranked Duos`))
+      .then((msg) => msg.edit(`${partner}, please confirm that you are a partner of ${author} for Ranked Duos.`))
       .then((confirmMessage) => {
         confirmMessage.react('✅');
 
@@ -76,7 +76,7 @@ module.exports = {
         confirmMessage.awaitReactions(filter, { max: 1, time: 60000, errors: ['time'] })
           .then(async (collected) => {
             // eslint-disable-next-line no-shadow
-            const lobby = await Lobby.findOne({ duos: true, players: author.id });
+            const lobby = await RankedLobby.findOne({ type: DUOS, players: author.id });
             if (lobby) {
               return confirmMessage.edit(`Command cancelled: ${author} joined a lobby.`);
             }

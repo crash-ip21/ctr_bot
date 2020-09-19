@@ -1,15 +1,18 @@
-const axios = require('axios');
-const { battleModes }  = require('./modes_battle');
+const { battleModes } = require('./modes_battle');
 
-async function rngModeBattle() {
+async function rngModeBattle(fromPools = false) {
   let modes = battleModes;
-  let N = 5;
+  const N = 5;
+
+  if (!fromPools) {
+    modes = [modes.flat()];
+  }
 
   const modesSize = modes.flat().length;
-  const modeSlice = 2;
+  const modeSlice = N / modes.length;
 
   if (!Number.isInteger(modeSlice)) {
-    throw Error('Something is wrong with pools');
+    throw Error('Something is wrong with modes');
   }
 
   const randomFractionsNumber = modesSize + N;
@@ -40,8 +43,6 @@ async function rngModeBattle() {
   })
     .sort((a, b) => a[1] - b[1])
     .map((p) => p[0]);
-
-  maps.pop();
 
   return maps;
 }

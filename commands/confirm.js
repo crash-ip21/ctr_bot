@@ -11,12 +11,12 @@ module.exports = {
 
     const authorId = message.author.id;
     if (!confirmations.has(authorId)) {
-      return message.reply('You don\'t have anything to confirm!');
+      return message.reply('you don\'t have anything to confirm!');
     }
 
     const userConfirmation = confirmations.get(authorId);
     if (!userConfirmation) {
-      return message.reply('You don\'t have anything to confirm!');
+      return message.reply('you don\'t have anything to confirm!');
     }
 
     const command = userConfirmation.get('command');
@@ -25,6 +25,6 @@ module.exports = {
       const c = message.client.commands.get(command);
       return c.confirm(message);
     }
-    return message.reply('You don\'t have anything to confirm!');
+    return message.reply('you don\'t have anything to confirm!');
   },
 };

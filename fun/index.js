@@ -89,7 +89,7 @@ async function fun(message) {
       mute.guildId = guild.id;
       mute.discordId = message.author.id;
       mute.mutedAt = now;
-      mute.mutedTill = now.add(1, 'm');
+      mute.mutedTill = now.add(3, 'm');
       mute.save();
 
       guild.channels.cache.forEach((c) => {

@@ -1,4 +1,5 @@
-const rngPoolFFa = require('../utils/rngPoolFFa');
+const rngPools = require('../utils/rngPools');
+const { ITEMLESS, ITEMS } = require('../db/models/ranked_lobbies');
 
 module.exports = {
   name: 'rng_ffa',
@@ -22,7 +23,7 @@ module.exports = {
               const items = content === '1' || content === '3';
               const fromPools = content === '0' || content === '1';
               const title = `Tracks for ${(items ? 'item' : 'itemless')} lobby ${fromPools ? '(pools)' : '(full rng)'}`;
-              rngPoolFFa(items, fromPools).then((maps) => {
+              rngPools({ type: items ? ITEMS : ITEMLESS, pool: fromPools }).then((maps) => {
                 m.edit(`**${title}**\n\`${maps.join('\n')}\``);
               });
             });

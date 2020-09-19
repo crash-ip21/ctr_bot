@@ -11,7 +11,7 @@ module.exports = {
   execute(message) {
     if (message.author.id !== config.owner) {
       return;
-      // return message.reply(`You should have a role ${adminRole} to use this command!`);
+      // return message.reply(`you should have a role ${adminRole} to use this command!`);
     }
 
     const channel = message.guild.channels.cache.find((c) => c.name === 'signups');

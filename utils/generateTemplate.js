@@ -1,3 +1,7 @@
+const {
+  _4V4, BATTLE, DUOS, ITEMLESS, ITEMS,
+} = require('../db/models/ranked_lobbies');
+
 const { flagToCode } = require('./regional_indicators');
 
 function getPlayerData(p) {
@@ -14,14 +18,40 @@ function getPlayerData(p) {
 const teams = ['A', 'B', 'C', 'D'];
 const colors = ['#189dfe', '#ff0000', '#7fff00', '#fff000'];
 
-async function generateTemplateFFA(players, doc, maps = 8) {
-  const title = `${doc.duos ? '#title Match #' : `Match # - ${doc.battle ? 'Battle Mode' : doc.items ? 'Items FFA' : 'Itemless FFA'}`}\n`;
+async function generateTemplate(players, doc) {
+  let title = '';
+  let numberOfMaps = 0;
+
+  switch (doc.type) {
+    case ITEMS:
+      title = 'Match # - Items FFA\n';
+      numberOfMaps = 8;
+      break;
+    case ITEMLESS:
+      title = 'Match # - Itemless FFA\n';
+      numberOfMaps = 5;
+      break;
+    case DUOS:
+      title = '#title Match #\n';
+      numberOfMaps = 8;
+      break;
+    case _4V4:
+      title = '#title Match #\n';
+      numberOfMaps = 10;
+      break;
+    case BATTLE:
+      title = 'Match # - Battle FFA\n';
+      numberOfMaps = 5;
+      break;
+    default:
+      break;
+  }
 
   const rows = [];
-  const points = `${Array(maps).fill(0).join('|')}`;
-  if (doc.duos) {
+  const points = `${Array(numberOfMaps).fill(0).join('|')}`;
+  if (doc.type === 'duos') {
     rows.push(title);
-    doc.duosList.forEach((duo, i) => {
+    doc.teamList.forEach((duo, i) => {
       rows.push(`Team ${teams[i]} ${colors[i]}`);
       duo.forEach((playerId) => {
         const p = players.find((d) => d.discordId === playerId);
@@ -47,4 +77,4 @@ async function generateTemplateFFA(players, doc, maps = 8) {
   return [PSNs, `https://gb.hlorenzi.com/table?data=${encodedData}`, template];
 }
 
-module.exports = generateTemplateFFA;
+module.exports = generateTemplate;

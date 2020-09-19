@@ -10,7 +10,7 @@ module.exports = {
   execute(message) {
     if (!(message.member && message.member.roles.cache.find((r) => r.name === 'Admin'))) {
       const adminRole = message.guild.roles.cache.find((r) => r.name === 'Admin');
-      return message.reply(`You should have a role ${adminRole} to use this command!`);
+      return message.reply(`you should have a role ${adminRole} to use this command!`);
     }
 
     const channel = message.guild.channels.cache.find((c) => c.name === 'signups');

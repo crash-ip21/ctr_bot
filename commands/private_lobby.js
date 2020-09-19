@@ -162,7 +162,6 @@ Example usage: !private_lobby FFA 8.\`\`\``);
 
         postChannel.send({ embed }).then((m) => {
           m.react('✅');
-          m.pin();
 
           privateLobby = new PrivateLobby({
             guild: m.guild.id,

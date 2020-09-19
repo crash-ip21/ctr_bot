@@ -1,4 +1,3 @@
-const Discord = require('discord.js');
 const Clan = require('../db/models/clans');
 
 const sendWithoutPing = (channel, message) => channel.send('...').then((m) => m.edit(message));
@@ -27,7 +26,7 @@ const executeAction = (message, clan) => {
                 return sendWithoutPing(channel, `${member} doesn't have ${role} role`);
               }
               member.roles.remove(role).then(() => {
-                message.channel.send(`Role ${role} was removed from you.`);
+                message.channel.send('...').then((m) => m.edit(`Role ${role} was removed from you.`));
               });
             });
           } else {

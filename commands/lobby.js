@@ -56,7 +56,7 @@ async function getPlayerInfo(playerId, items, duos) {
   const tag = `<@${playerId}>${flag}`;
   let { psn } = p;
   if (psn) {
-    psn = psn.replace('_', '\\_');
+    psn = psn.replace(/_/g, '\\_');
   }
   return [tag, psn, rankValue];
 }
@@ -604,7 +604,8 @@ module.exports = {
       return message.reply('you can use this command only in Ranked Lobbies category.');
     }
 
-    switch (action && action.toLowerCase()) {
+    action = action && action.toLowerCase();
+    switch (action) {
       case 'new':
         // eslint-disable-next-line no-case-declarations
         const creatorsLobby = await Lobby.findOne({ creator: message.author.id });

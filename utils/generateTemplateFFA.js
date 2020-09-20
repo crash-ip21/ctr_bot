@@ -41,7 +41,7 @@ async function generateTemplateFFA(players, doc, maps = 8) {
 
   const PSNs = [];
   players.forEach((p) => {
-    PSNs.push(p.psn.replace('_', '\\_'));
+    PSNs.push(p.psn.replace(/_/g, '\\_'));
   });
 
   return [PSNs, `https://gb.hlorenzi.com/table?data=${encodedData}`, template];

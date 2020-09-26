@@ -23,6 +23,8 @@ function getEmbed(info, players, psns, description, created) {
     psns = ['No players yet'];
   }
 
+  psns = psns.map((psn) => psn.replace(/_/g, '\\_'));
+
   return {
     author: {
       name: 'A private lobby is gathering!',

@@ -8,7 +8,7 @@ module.exports = {
   name: 'partner_set',
   description: 'Set your partner for Ranked Duos.',
   guildOnly: true,
-  aliases: ['set_partner', 'partner_s'],
+  aliases: ['set_partner', 'partner_s', 'marry'],
   async execute(message) {
     if (!message.mentions.members.size) {
       return message.reply('you should tag your partner.');
@@ -62,9 +62,9 @@ module.exports = {
       return message.channel.send('...').then((m) => m.edit(`${author}, ${partner} already has another partner.`));
     }
 
-    const lobby = await RankedLobby.findOne({ type: DUOS, players: author.id });
+    const lobby = await RankedLobby.findOne({ type: DUOS, players: { $in: [author.id, partner.id] } });
     if (lobby) {
-      return message.reply('you can\'t set a partner while you are in a lobby.');
+      return message.reply('you can\'t set a partner while one of you are in a lobby.');
     }
 
     message.channel.send('...')

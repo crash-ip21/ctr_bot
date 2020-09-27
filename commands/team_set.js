@@ -49,9 +49,9 @@ module.exports = {
       return message.channel.send('...').then((m) => m.edit(`${author}, you are already in a team.`));
     }
 
-    const lobby = await RankedLobby.findOne({ type: _4V4, players: author.id });
+    const lobby = await RankedLobby.findOne({ type: _4V4, players: { $in: [author.id, ...teammateIds] } });
     if (lobby) {
-      return message.reply('you can\'t set a partner while you are in a lobby.');
+      return message.reply('you can\'t set a team while one of you are in a lobby.');
     }
 
     for (const teammate of teammates.array()) {
@@ -89,12 +89,12 @@ module.exports = {
         confirmMessage.awaitReactions(filter, { max: 3, time: 3 * 60000, errors: ['time'] })
           .then(async (collected) => {
             // eslint-disable-next-line no-shadow
-            const lobby = await RankedLobby.findOne({ type: _4V4, players: author.id });
+            const lobby = await RankedLobby.findOne({ guild: guild.id, type: _4V4, players: author.id });
             if (lobby) {
               return confirmMessage.edit(`Command cancelled: ${author} joined a lobby.`);
             }
 
-            const teamExists = await Team.findOne({ guild: guild.id, $in: teammateIds });
+            const teamExists = await Team.findOne({ guild: guild.id, players: { $in: [author.id, ...teammateIds] } });
             if (teamExists) {
               return confirmMessage.edit('Command cancelled: one of you have already set a team.');
             }

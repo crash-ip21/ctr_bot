@@ -72,7 +72,6 @@ const icons = {
   [ITEMLESS]: 'https://vignette.wikia.nocookie.net/crashban/images/9/96/NF_Champion_Wheels.png',
   [DUOS]: 'https://vignette.wikia.nocookie.net/crashban/images/8/83/CTRNF-AkuUka.png',
   [BATTLE]: 'https://vignette.wikia.nocookie.net/crashban/images/9/97/CTRNF-Invisibility.png',
-  // [_4V4]: 'https://vignette.wikia.nocookie.net/crashban/images/1/16/NF_Firehawk_Kart.png',
   [_4V4]: 'https://i.imgur.com/3dvcaur.png',
 };
 
@@ -101,16 +100,8 @@ async function getPlayerInfo(playerId, doc) {
   const rank = await Rank.findOne({ name: p.psn });
   let rankValue = DEFAULT_RANK;
 
-  const types = {
-    [ITEMS]: 'itemRank',
-    [ITEMLESS]: 'itemlessRank',
-    [DUOS]: 'duosRank',
-    [BATTLE]: 'battleRank',
-    [_4V4]: '4v4Rank',
-  };
-
   if (rank) {
-    rankValue = rank[types[doc.type]];
+    rankValue = rank[doc.type].rank;
     rankValue = parseInt(rankValue, 10);
   }
 
@@ -154,14 +145,12 @@ async function getEmbed(doc, players, maps, roomChannel) {
     psnAndRanks = psns.join('\n');
   }
 
-  console.log(playersInfo);
   if (doc.teamList && doc.teamList.length) {
     playersText = '';
     playersText += '**Teams:**\n';
     doc.teamList.forEach((duo, i) => {
       playersText += `${i + 1}.`;
       duo.forEach((player, k) => {
-        console.log(player);
         const info = playersInfo[player];
         const tag = info && info.tag;
         playersText += `${k ? '⠀' : ''} ${tag}\n`;
@@ -429,8 +418,7 @@ function startLobby(docId) {
                   playersText = players.map((u, i) => `${i + 1}. <@${u}>`).join('\n');
                 }
 
-                const playerDocs = await Player.find({ discordId: { $in: players } });
-                const [PSNs, templateUrl, template] = await generateTemplate(playerDocs, doc);
+                const [PSNs, templateUrl, template] = await generateTemplate(players, doc);
 
                 message.edit({
                   embed: await getEmbed(doc, players, maps, roomChannel),
@@ -439,13 +427,13 @@ function startLobby(docId) {
                 // todo add ranks and tags?
                 const fields = [
                   {
-                    name: 'Maps',
-                    value: maps,
+                    name: 'PSNs',
+                    value: PSNs.join('\n'),
                     inline: true,
                   },
                   {
-                    name: 'PSNs',
-                    value: PSNs,
+                    name: 'Maps',
+                    value: maps,
                     inline: true,
                   },
                 ];
@@ -467,6 +455,7 @@ Your room is ${roomChannel}.
 Use \`!lobby end\` when your match is done.
 ${playersText}`,
                   embed: {
+                    title: `The ${getTitle(doc)} has started`,
                     fields,
                   },
                 }).then((m) => {
@@ -875,7 +864,7 @@ The value should be in range: \`${diffMin} - ${diffMax}\`. Defaults to \`${diffD
                       const rank = await Rank.findOne({ name: player.psn });
                       let playerRank = PLAYER_DEFAULT_RANK;
                       if (rank) {
-                        playerRank = type === ITEMS ? rank.itemRank : rank.itemlessRank;
+                        playerRank = type === ITEMS ? rank.items.rank : rank.itemless.rank;
                       }
 
                       collectedMessage2.delete();
@@ -1106,7 +1095,7 @@ async function mogi(reaction, user, removed = false) {
 
             let playerRank = PLAYER_DEFAULT_RANK;
             if (rank) {
-              playerRank = doc.isItems() ? rank.itemRank : rank.itemlessRank;
+              playerRank = doc.isItems() ? rank.items.rank : rank.itemless.rank;
             }
             const lockedRank = doc.locked.rank;
             const minRank = lockedRank - doc.locked.shift;
@@ -1234,7 +1223,12 @@ async function mogi(reaction, user, removed = false) {
 
                 if (playersCount > 4) {
                   const soloQueue = players.filter((p) => !doc.teamList.flat().includes(p));
-                  players = players.filter((p) => !soloQueue.includes(p));
+                  if (doc.teamList.length) {
+                    players = players.filter((p) => !soloQueue.includes(p));
+                  } else {
+                    const soloToKick = soloQueue.slice(4);
+                    players = players.filter((p) => !soloToKick.includes(p));
+                  }
                 }
 
                 if (!players.some((p) => teamPlayers.includes(p))) {
@@ -1259,7 +1253,7 @@ async function mogi(reaction, user, removed = false) {
           return doc.save().then(async (newDoc) => {
             const count = players.length;
             if (count) {
-              if ((doc.isItemless() && count === ITEMLESS_MAX) || (count === ITEMS_MAX)) {
+              if (((doc.isItemless() || doc.isBattle()) && count === ITEMLESS_MAX) || (count === ITEMS_MAX)) {
                 startLobby(doc.id);
               } else {
                 message.edit({
@@ -1271,7 +1265,6 @@ async function mogi(reaction, user, removed = false) {
                 embed: await getEmbed(doc),
               });
             }
-            console.log('done');
           }).catch(console.error);
         })).then(() => {
           console.log(`lock released ${doc._id}`);
@@ -1456,11 +1449,26 @@ function resetCounters() {
 
 new CronJob('* * * * *', resetCounters).start();
 
-const correctSums = {
-  4: 55,
-  6: 176,
-  7: 248,
-  8: 312,
+const correctSumsByTeamsCount = {
+  1: {
+    8: 312,
+    7: 217,
+    6: 144,
+    5: 85,
+    4: 44,
+    3: 21,
+    2: 8,
+  },
+  2: {
+    8: 312,
+    4: 40,
+  },
+  3: {
+    6: 126,
+  },
+  4: {
+    8: 288,
+  },
 };
 
 function checkScoresSum(message) {
@@ -1474,18 +1482,25 @@ function checkScoresSum(message) {
   const data = parseData(text);
 
   if (data) {
-    const { players } = data.clans[0];
+    const players = [];
+    data.clans.forEach((clan) => {
+      players.push(...clan.players);
+    });
     const sum = players.reduce((s, p) => s + p.totalScore, 0);
+
+    const correctSums = correctSumsByTeamsCount[data.clans.length];
+    if (!correctSums) {
+      return message.reply('your scores are incorrect.');
+    }
 
     const correctSum = correctSums[players.length];
     if (correctSum && sum !== correctSum) {
       if (sum > correctSum) {
-        message.reply(`the total number of points for your lobby is over ${correctSum} points.
+        return message.reply(`the total number of points for your lobby is over ${correctSum} points.
 If there were 1 or multiple ties in your lobby, you can ignore this message. If not, please double check the results.`);
-      } else {
-        message.reply(`the total number of points for your lobby is under ${correctSum} points.
-Unless somebody left the lobby before all races were played or was penalized, please double check the results.`);
       }
+      return message.reply(`the total number of points for your lobby is under ${correctSum} points.
+Unless somebody left the lobby before all races were played or was penalized, please double check the results.`);
     }
   }
 }
@@ -1528,12 +1543,9 @@ client.on('message', (message) => {
   const { member } = message;
   const isStaff = member.hasPermission(['MANAGE_CHANNELS', 'MANAGE_ROLES']);
 
-  // check sumbissions
+  // check submissions
   if (message.channel.name === 'results-submissions') {
     if (!isStaff && !message.content.includes('`') && message.content.includes('|')) {
-      const s = `please put scores inside triple grave accent: \\\`\`\`PUT_SCORES_HERE\\\`\`\`
-It will prevent Discord from applying styling when people have underscores in their PSN.
-The scores will look like this:`;
       message.reply(`\`\`\`${message.content}\`\`\``).then(() => {
         message.delete();
       });
@@ -1579,98 +1591,45 @@ client.on('ready', () => {
   });
 });
 
+function getBoardRequestData(teamId) {
+  return `{
+  team(teamId: "${teamId}")
+    {
+      id, kind, name, tag, iconSrc, flag, gamePreset, ownerIds, updaterIds, createDate, modifyDate, activityDate, wins, draws, losses, baseWins, baseDraws, baseLosses, ratingScheme, ratingMin, tiers { name, lowerBound, color }, ratingElo { initial, scalingFactors }, ratingMk8dxMmr { initial, scalingFactors, baselines }, matchCount, playerCount,
+      players { name, ranking, maxRanking, minRanking, wins, losses, playedMatchCount, firstActivityDate, lastActivityDate, rating, ratingGain, maxRating, minRating, maxRatingGain, maxRatingLoss, points, maxPointsGain }
+    }
+}`;
+}
+
 // update cached ranks
 async function getRanks() {
   const url = 'https://gb.hlorenzi.com/api/v1/graphql';
-  const items = 'iwkwkl';
-  const itemless = 'Rt4eY_';
-  const duos = 'HzYdL_';
-  const battle = 'fgDPyd';
 
-  const itemsResponse = await axios.post(url, `{
-  team(teamId: "${items}")
-    {
-      id, kind, name, tag, iconSrc, flag, gamePreset, ownerIds, updaterIds, createDate, modifyDate, activityDate, wins, draws, losses, baseWins, baseDraws, baseLosses, ratingScheme, ratingMin, tiers { name, lowerBound, color }, ratingElo { initial, scalingFactors }, ratingMk8dxMmr { initial, scalingFactors, baselines }, matchCount, playerCount,
-      players { name, ranking, maxRanking, minRanking, wins, losses, playedMatchCount, firstActivityDate, lastActivityDate, rating, ratingGain, maxRating, minRating, maxRatingGain, maxRatingLoss, points, maxPointsGain }
-    }
-}`, {
-    headers: { 'Content-Type': 'text/plain' },
-  });
+  const types = {
+    [ITEMS]: 'ay6wNS',
+    [ITEMLESS]: 'pAfqYh',
+    [DUOS]: 'c9iLJU',
+    [BATTLE]: 'oXNYH1',
+    [_4V4]: '4fBRNF',
+  };
 
-  const itemlessResponse = await axios.post(url, `{
-  team(teamId: "${itemless}")
-    {
-      id, kind, name, tag, iconSrc, flag, gamePreset, ownerIds, updaterIds, createDate, modifyDate, activityDate, wins, draws, losses, baseWins, baseDraws, baseLosses, ratingScheme, ratingMin, tiers { name, lowerBound, color }, ratingElo { initial, scalingFactors }, ratingMk8dxMmr { initial, scalingFactors, baselines }, matchCount, playerCount,
-      players { name, ranking, maxRanking, minRanking, wins, losses, playedMatchCount, firstActivityDate, lastActivityDate, rating, ratingGain, maxRating, minRating, maxRatingGain, maxRatingLoss, points, maxPointsGain }
-    }
-}`, {
-    headers: { 'Content-Type': 'text/plain' },
-  });
+  const ranks = {};
 
-  const duosResponse = await axios.post(url, `{
-  team(teamId: "${duos}")
-    {
-      id, kind, name, tag, iconSrc, flag, gamePreset, ownerIds, updaterIds, createDate, modifyDate, activityDate, wins, draws, losses, baseWins, baseDraws, baseLosses, ratingScheme, ratingMin, tiers { name, lowerBound, color }, ratingElo { initial, scalingFactors }, ratingMk8dxMmr { initial, scalingFactors, baselines }, matchCount, playerCount,
-      players { name, ranking, maxRanking, minRanking, wins, losses, playedMatchCount, firstActivityDate, lastActivityDate, rating, ratingGain, maxRating, minRating, maxRatingGain, maxRatingLoss, points, maxPointsGain }
-    }
-}`, {
-    headers: { 'Content-Type': 'text/plain' },
-  });
-
-  const battleResponse = await axios.post(url, `{
-  team(teamId: "${battle}")
-    {
-      id, kind, name, tag, iconSrc, flag, gamePreset, ownerIds, updaterIds, createDate, modifyDate, activityDate, wins, draws, losses, baseWins, baseDraws, baseLosses, ratingScheme, ratingMin, tiers { name, lowerBound, color }, ratingElo { initial, scalingFactors }, ratingMk8dxMmr { initial, scalingFactors, baselines }, matchCount, playerCount,
-      players { name, ranking, maxRanking, minRanking, wins, losses, playedMatchCount, firstActivityDate, lastActivityDate, rating, ratingGain, maxRating, minRating, maxRatingGain, maxRatingLoss, points, maxPointsGain }
-    }
-}`, {
-    headers: { 'Content-Type': 'text/plain' },
-  });
-
-  const players = {};
-
-  const itemsPlayers = itemsResponse.data.data.team.players;
-  itemsPlayers.forEach((p) => {
-    const { name } = p;
-    if (!(name in players)) {
-      players[name] = { name };
-    }
-    players[name].itemRank = p.rating;
-    players[name].itemPosition = p.ranking;
-  });
-
-  const itemlessPlayers = itemlessResponse.data.data.team.players;
-  itemlessPlayers.forEach((p) => {
-    const { name } = p;
-    if (!(name in players)) {
-      players[name] = { name };
-    }
-    players[name].itemlessRank = p.rating;
-    players[name].itemlessPosition = p.ranking;
-  });
-
-  const duosPlayers = duosResponse.data.data.team.players;
-  duosPlayers.forEach((p) => {
-    const { name } = p;
-    if (!(name in players)) {
-      players[name] = { name };
-    }
-    players[name].duosRank = p.rating;
-    players[name].duosPosition = p.ranking;
-  });
-
-  const battlePlayers = battleResponse.data.data.team.players;
-  battlePlayers.forEach((p) => {
-    const { name } = p;
-    if (!(name in players)) {
-      players[name] = { name };
-    }
-    players[name].battleRank = p.rating;
-    players[name].battlePosition = p.ranking;
-  });
+  for (const key in types) {
+    const id = types[key];
+    const response = await axios.post(url, getBoardRequestData(id), { headers: { 'Content-Type': 'text/plain' } });
+    const { players } = response.data.data.team;
+    players.forEach((p) => {
+      const { name } = p;
+      if (!(name in ranks)) {
+        ranks[name] = { name };
+      }
+      ranks[name][key] = { rank: p.rating, position: p.ranking };
+    });
+  }
 
   await Rank.deleteMany();
-  await Rank.insertMany(Object.values(players));
+  await Rank.insertMany(Object.values(ranks));
 }
 
 new CronJob('0/15 * * * *', getRanks).start();
@@ -1770,6 +1729,7 @@ function checkOldDuos() {
       });
     });
 }
+
 new CronJob('* * * * *', checkOldDuos).start();
 
 function checkOldTeams() {
@@ -1794,4 +1754,5 @@ function checkOldTeams() {
       });
     });
 }
+
 new CronJob('* * * * *', checkOldTeams).start();

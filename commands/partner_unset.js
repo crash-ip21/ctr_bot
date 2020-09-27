@@ -6,7 +6,7 @@ module.exports = {
   name: 'partner_unset',
   description: 'Unset your partner for Ranked Duos.',
   guildOnly: true,
-  aliases: ['unset_partner', 'partner_remove', 'partner_u'],
+  aliases: ['unset_partner', 'partner_remove', 'partner_u', 'divorce'],
   async execute(message) {
     const { author, guild } = message;
 

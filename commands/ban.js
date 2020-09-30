@@ -10,7 +10,6 @@ module.exports = {
   description: '🔨',
   guildOnly: true,
   permissions: ['MANAGE_CHANNELS', 'MANAGE_ROLES'],
-  aliases: ['ranked_ban'],
   args: true,
   usage: '@tag [duration] [reason]',
   async execute(message, args) {

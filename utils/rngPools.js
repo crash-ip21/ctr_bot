@@ -1,15 +1,35 @@
-const axios = require('axios');
-const { itemPools, itemlessPools } = require('./pools');
+const {
+  _4V4, BATTLE, DUOS, ITEMLESS, ITEMS,
+} = require('../db/models/ranked_lobbies');
+const {
+  itemPools, battlePools, _4v4Pools,
+} = require('./pools');
 
-async function rngPoolFFa(items = true, fromPools = true) {
+async function rngPools(doc) {
+  const fromPools = doc.pools;
   let pools;
   let N;
-  if (items) {
-    N = 8;
-    pools = itemPools;
-  } else {
-    N = 5;
-    pools = itemlessPools;
+
+  switch (doc.type) {
+    case ITEMS:
+    case DUOS:
+      N = 8;
+      pools = itemPools;
+      break;
+    case ITEMLESS:
+      N = 5;
+      pools = _4v4Pools;
+      break;
+    case _4V4:
+      N = 10;
+      pools = _4v4Pools;
+      break;
+    case BATTLE:
+      N = 5;
+      pools = battlePools;
+      break;
+    default:
+      break;
   }
 
   if (!fromPools) {
@@ -60,7 +80,6 @@ async function rngPoolFFa(items = true, fromPools = true) {
   });
 
   return maps;
-  // });
 }
 
-module.exports = rngPoolFFa;
+module.exports = rngPools;

@@ -9,7 +9,7 @@ module.exports = {
   execute(message) {
     if (!(message.member && message.member.roles.cache.find((r) => r.name === 'Admin'))) {
       const adminRole = message.guild.roles.cache.find((r) => r.name === 'Admin');
-      return message.reply(`You should have a role ${adminRole} to use this command!`);
+      return message.reply(`you should have a role ${adminRole} to use this command!`);
     }
 
     const { confirmations } = bot;
@@ -24,10 +24,10 @@ module.exports = {
 
     const confirmationCommand = userConfirmation.get('command');
     if (confirmationCommand) {
-      return message.reply(`You need to confirm or cancel your previous command: ${confirmationCommand}`);
+      return message.reply(`you need to confirm or cancel your previous command: ${confirmationCommand}`);
     }
 
-    message.reply(`This command will delete all channels in \`Tournament Lobbies\` category and all roles with the same names!
+    message.reply(`this command will delete all channels in \`Tournament Lobbies\` category and all roles with the same names!
 Say \`!confirm\` to proceed, \`!cancel\` to cancel.
 Command will be automatically cancelled after ${autoCancelSeconds} seconds.`);
     const commandName = 'delete_tournament_channels';
@@ -36,7 +36,7 @@ Command will be automatically cancelled after ${autoCancelSeconds} seconds.`);
     return setTimeout(() => {
       if (userConfirmation.get('command')) {
         userConfirmation.delete('command');
-        return message.reply(`Command \`${commandName}\` cancelled!`);
+        return message.reply(`command \`${commandName}\` cancelled!`);
       }
       return null;
     }, autoCancelSeconds * 1000);

@@ -1,43 +1,36 @@
 const Player = require('../db/models/player');
 const Rank = require('../db/models/rank');
+const {
+  _4V4, BATTLE, DUOS, ITEMLESS, ITEMS,
+} = require('../db/models/ranked_lobbies');
+
+const ranks = {
+  [ITEMS]: 'Items',
+  [ITEMLESS]: 'Itemless',
+  [DUOS]: 'Duos',
+  [BATTLE]: 'Battle',
+  [_4V4]: '4v4',
+};
 
 function sendMessage(message, rank) {
-  let items = 'No rank';
-  let itemless = 'No rank';
-  let duos = 'No rank';
+  const fields = Object.entries(ranks).map(([key, name]) => {
+    const position = rank[key].position + 1;
+    const r = parseInt(rank[key].rank, 10);
 
-  if (rank.itemRank) {
-    items = `#${rank.itemPosition + 1} - ${parseInt(rank.itemRank, 10)}`;
-  }
+    let value = `#${position} - ${r}`;
+    if (Number.isNaN(position) || Number.isNaN(r)) value = '-';
 
-  if (rank.itemlessRank) {
-    itemless = `#${rank.itemlessPosition + 1} - ${parseInt(rank.itemlessRank, 10)}`;
-  }
-
-  if (rank.duosRank) {
-    duos = `#${rank.duosPosition + 1} - ${parseInt(rank.duosRank, 10)}`;
-  }
+    return ({
+      name,
+      value,
+      inline: true,
+    });
+  });
 
   message.channel.send({
     embed: {
       title: `${rank.name}'s ranks`,
-      fields: [
-        {
-          name: 'Items',
-          value: items,
-          inline: true,
-        },
-        {
-          name: 'Itemless',
-          value: itemless,
-          inline: true,
-        },
-        {
-          name: 'Duos',
-          value: duos,
-          inline: true,
-        },
-      ],
+      fields,
     },
   });
 }
@@ -52,7 +45,7 @@ module.exports = {
       const psn = args[0];
       Rank.findOne({ name: psn }).then((rank) => {
         if (!rank) {
-          return message.channel.send('player has no rank');
+          return message.channel.send('Player has no rank');
         }
 
         sendMessage(message, rank);

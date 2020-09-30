@@ -1,5 +1,5 @@
 const moment = require('moment');
-const Lobby = require('../db/models/lobbies');
+const RankedLobby = require('../db/models/ranked_lobbies').default;
 const RankedBan = require('../db/models/ranked_bans');
 const findMember = require('../utils/findMember');
 
@@ -54,15 +54,15 @@ module.exports = {
 
         const msg = message.channel.send('...');
 
-        Lobby.find({ guild: message.guild.id, players: member.id, started: false }).then((docs) => {
+        RankedLobby.find({ guild: message.guild.id, players: member.id, started: false }).then((docs) => {
           docs.forEach(async (doc) => {
             const guild = message.client.guilds.cache.get(doc.guild);
             if (guild) {
               const channel = guild.channels.cache.get(doc.channel);
               if (channel) {
                 channel.messages.fetch(doc.message).then((msg) => {
-                  if (doc.duos) {
-                    const duo = doc.duosList.filter((d) => d.includes(member.id));
+                  if (doc.type === 'duos') {
+                    const duo = doc.teamList.filter((d) => d.includes(member.id));
                     duo.forEach((d) => {
                       d.forEach((p) => {
                         msg.reactions.cache.get('✅').users.remove(p);

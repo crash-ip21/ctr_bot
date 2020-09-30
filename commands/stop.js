@@ -7,11 +7,11 @@ module.exports = {
   execute(message) {
     if (!(message.member && message.member.roles.cache.find((r) => r.name === 'Admin')) && message.author.id !== config.owner) {
       const adminRole = message.guild.roles.cache.find((r) => r.name === 'Admin');
-      return message.reply(`You should have a role ${adminRole} to use this command!`);
+      return message.reply(`you should have a role ${adminRole} to use this command!`);
     }
 
     // eslint-disable-next-line no-param-reassign
     message.client.stop = true;
-    return message.reply('You stopped me :slight_frown:');
+    return message.reply('you stopped me :slight_frown:');
   },
 };

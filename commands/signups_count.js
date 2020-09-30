@@ -8,7 +8,7 @@ module.exports = {
   async execute(message, args, guild = null) {
     if (message) {
       // eslint-disable-next-line no-param-reassign
-      message = await message.reply('Wait...');
+      message = await message.reply('wait...');
     }
 
     let server;

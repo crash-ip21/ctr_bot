@@ -53,7 +53,7 @@ Edit clans:
             outputType: 'embed',
             elements: clanList,
             elementsPerPage: 20,
-            embedOptions: { heading: `Clans (${clanList.length})` },
+            embedOptions: { heading: `CTR competitive clans (${clanList.length})` },
             reactionCollectorOptions: { time: 3600000 },
           });
         });

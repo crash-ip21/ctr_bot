@@ -26,7 +26,7 @@ ${options.elements.join('\n')}
  * }
  *
  * @param options
- * @returns {{footer: {text: string}, fields: [{name: *, value: *}]}}
+ * @returns {{footer: {text: string}, description: string, title: (*|string)}}
  */
 function getEmbed(options) {
   options.heading = options.heading || 'Heading';
@@ -35,12 +35,8 @@ function getEmbed(options) {
   options.numPages = options.numPages || 1;
 
   return {
-    fields: [
-      {
-        name: options.heading,
-        value: options.elements.join('\n'),
-      },
-    ],
+    title: options.heading,
+    description: options.elements.join('\n'),
     footer: {
       text: `Page ${options.currentPage} of ${options.numPages}`,
     },

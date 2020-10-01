@@ -83,7 +83,7 @@ const roleNames = {
   [_4V4]: 'ranked 4v4',
 };
 
-const PLAYER_DEFAULT_RANK = 1200;
+const PLAYER_DEFAULT_RANK = 1000;
 const DEFAULT_RANK = PLAYER_DEFAULT_RANK;
 
 function getIcon(doc) {
@@ -665,9 +665,9 @@ module.exports = {
     const { member } = message;
 
     const now = moment();
-    // if (moment('2020-07-18 05:00') <= now) {
-    //   return message.channel.send('Lobbies are temporarily closed.');
-    // }
+    if (moment('2020-10-01 00:00') >= now) {
+      return message.channel.send('Lobbies are temporarily closed.');
+    }
 
     const { guild } = message;
     const { user } = member;

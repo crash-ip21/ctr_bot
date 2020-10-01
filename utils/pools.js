@@ -23,7 +23,6 @@ module.exports.itemPools = [
     'Barin Ruins',
     'Assembly Lane',
     'Electron Avenue',
-    'Spyro Circuit',
   ],
   [
     'Polar Pass',

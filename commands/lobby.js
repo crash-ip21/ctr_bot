@@ -22,6 +22,7 @@ const generateTemplate = require('../utils/generateTemplate');
 const { parseData } = require('../table');
 const sendLogMessage = require('../utils/sendLogMessage');
 const config = require('../config.js');
+const { battleModes } = require('../utils/modes_battle');
 
 const lock = new AsyncLock();
 
@@ -438,9 +439,9 @@ function startLobby(docId) {
                   },
                 ];
 
-                if (doc.isBattle()) {
-                  const modes = await rngModeBattle();
+                const modes = await rngModeBattle();
 
+                if (doc.isBattle()) {
                   fields.push({
                     name: 'Modes',
                     value: modes.join('\n'),
@@ -477,7 +478,28 @@ ${playersText}`,
                   }
 
                   if (doc.isBattle()) {
-                    roomChannel.send('You can check the battle mode rules by using `!battle_modes`!');
+                    const settings = [];
+
+                    modes.forEach((mode) => {
+                      battleModes.forEach((battleMode) => {
+                        const entry = battleMode.find((element) => element.name === mode);
+
+                        if (entry !== undefined) {
+                          const text = `------ ${mode} ------
+${entry.settings.join('\n')}`;
+
+                          settings.push(text);
+                        }
+                      });
+                    });
+
+                    roomChannel.send(`\`\`\`
+Battle Mode Rules
+
+Teams: OFF / 4 for Steal The Bacon
+AI: DISABLED
+
+${settings.join('\n\n')}\`\`\``);
                   }
                 });
               });
@@ -500,9 +522,9 @@ function confirmLobbyStart(doc, message, override = false) {
     return message.channel.send('Lobby has already been started.');
   }
 
-  if (!override && minutes < 15) {
-    return message.channel.send(`You need to wait at least ${15 - minutes} more minutes to force start the lobby.`);
-  }
+  // if (!override && minutes < 15) {
+  //   return message.channel.send(`You need to wait at least ${15 - minutes} more minutes to force start the lobby.`);
+  // }
 
   const playersCount = doc.players.length;
 
@@ -1452,19 +1474,19 @@ new CronJob('* * * * *', resetCounters).start();
 const correctSumsByTeamsCount = {
   1: {
     8: 312,
-    7: 217,
-    6: 144,
-    5: 85,
-    4: 44,
-    3: 21,
-    2: 8,
+    7: 248,
+    6: 192,
+    5: 136,
+    4: 55,
+    3: 35,
+    2: 20,
   },
   2: {
-    8: 312,
-    4: 40,
+    8: 390,
+    4: 80,
   },
   3: {
-    6: 126,
+    6: 168,
   },
   4: {
     8: 288,

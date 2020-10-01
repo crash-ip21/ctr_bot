@@ -1,12 +1,17 @@
 const { battleModes } = require('./modes_battle');
 
-async function rngModeBattle(fromPools = false) {
-  let modes = battleModes;
+async function rngModeBattle() {
+  let modes = [];
+
+  battleModes.forEach((battleMode) => {
+    battleMode.forEach((mode) => {
+      modes.push(mode.name);
+    });
+  });
+
   const N = 5;
 
-  if (!fromPools) {
-    modes = [modes.flat()];
-  }
+  modes = [modes.flat()];
 
   const modesSize = modes.flat().length;
   const modeSlice = N / modes.length;

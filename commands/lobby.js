@@ -496,7 +496,7 @@ ${entry.settings.join('\n')}`;
                     roomChannel.send(`\`\`\`
 Battle Mode Rules
 
-Teams: OFF / 4 for Steal The Bacon
+Teams: OFF (4 for Steal The Bacon)
 AI: DISABLED
 
 ${settings.join('\n\n')}\`\`\``);
@@ -522,9 +522,9 @@ function confirmLobbyStart(doc, message, override = false) {
     return message.channel.send('Lobby has already been started.');
   }
 
-  // if (!override && minutes < 15) {
-  //   return message.channel.send(`You need to wait at least ${15 - minutes} more minutes to force start the lobby.`);
-  // }
+  if (!override && minutes < 15) {
+    return message.channel.send(`You need to wait at least ${15 - minutes} more minutes to force start the lobby.`);
+  }
 
   const playersCount = doc.players.length;
 

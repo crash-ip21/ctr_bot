@@ -6,6 +6,13 @@ const Clan = new Schema({
   discordId: String,
   flag: String,
   psn: String,
+  character: String,
+  track: String,
+  nat: String,
+  discordVc: Boolean,
+  ps4Vc: Boolean,
+  favCharacter: String,
+  favTrack: String,
 });
 
 module.exports = model('players', Clan);

@@ -58,7 +58,7 @@ function getEmbed(guildMember, fields) {
       text: `ID: ${guildMember.user.id}`,
     },
     author: {
-      name: `${guildMember.user.username}#${guildMember.user.discriminator}`,
+      name: `${guildMember.user.username}#${guildMember.user.discriminator}${guildMember.user.bot ? ' (Bot)' : ''}`,
       icon_url: avatarUrl,
     },
     fields,
@@ -109,6 +109,8 @@ module.exports = {
 
     const guildMember = message.guild.member(user);
     const embedFields = [];
+
+    console.log(guildMember.guild.presences);
 
     Player.findOne({ discordId: user.id }).then((player) => {
       if (!player) {

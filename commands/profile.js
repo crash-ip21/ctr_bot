@@ -312,7 +312,7 @@ module.exports = {
           }
 
           embedFields.push({
-            name: ':trophy: Achievements',
+            name: `:trophy: Achievements (${achievements.length})`,
             value: achievements.join('\n'),
             inline: true,
           });
@@ -322,7 +322,7 @@ module.exports = {
           /* Roles */
           const roles = [];
 
-          guildMember.roles.cache.forEach((r) => {
+          guildMember.roles.cache.sort((a, b) => b.rawPosition - a.rawPosition || b.id - a.id).forEach((r) => {
             if (r.name.toLowerCase() !== '@everyone') {
               roles.push(`<@&${r.id}>`);
             }
@@ -333,7 +333,7 @@ module.exports = {
           }
 
           embedFields.push({
-            name: ':art: Roles',
+            name: `:art: Roles (${roles.length})`,
             value: roles.join(', '),
             inline: true,
           });

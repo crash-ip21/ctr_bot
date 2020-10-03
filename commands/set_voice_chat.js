@@ -2,7 +2,6 @@ const Player = require('../db/models/player');
 
 module.exports = {
   name: 'set_voice_chat',
-  usage: '[options] (example: !set_voice_chat discord, ps4)',
   description: 'Set your voice chat options.',
   guildOnly: true,
   execute(message, args) {

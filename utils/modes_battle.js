@@ -6,7 +6,7 @@ module.exports.battleModes = [
         'Game Mode: Limit Battle',
         'Type: Time',
         'Time Limit: 6 minutes',
-        'Power-ups: Beaker, Triple Missile and Triple Bomb DISABLED',
+        'Power-ups: DISABLED Beaker, Triple Missile and Triple Bomb',
       ],
     },
     {
@@ -15,7 +15,7 @@ module.exports.battleModes = [
         'Game Mode: Limit Battle',
         'Type: Time',
         'Time Limit: 6 minutes',
-        'Power-ups: Beaker, Mask, Super Engine, Triple Missile and Triple Bomb DISABLED',
+        'Power-ups: DISABLED Beaker, Mask, Super Engine, Triple Missile and Triple Bomb',
       ],
     },
   ],
@@ -25,7 +25,7 @@ module.exports.battleModes = [
       settings: [
         'Game Mode: Crystal Grab',
         'Time Limit: 3 minutes',
-        'Power-ups: Shield, Mask, Invisibility, Triple Missile and Triple Bomb DISABLED',
+        'Power-ups: DISABLED Shield, Mask, Invisibility, Triple Missile and Triple Bomb',
       ],
     },
   ],
@@ -36,7 +36,7 @@ module.exports.battleModes = [
         'Game Mode: Last Kart Driving',
         'Life Limit: 9 lives',
         'Time Limit: 6 minutes',
-        'Power-ups: Beaker, Shield, Triple Missile and Triple Bomb DISABLED',
+        'Power-ups: DISABLED Beaker, Shield, Triple Missile and Triple Bomb',
       ],
     },
     {
@@ -45,27 +45,18 @@ module.exports.battleModes = [
         'Game Mode: Last Kart Driving',
         'Life Limit: 9 lives',
         'Time Limit: 6 minutes',
-        'Power-ups: Only Single Bomb and Turbo Canister ENABLED',
+        'Power-ups: ENABLED ONLY Single Bomb and Turbo Canister',
       ],
     },
   ],
   [
-    {
-      name: 'Basic Steal The Bacon',
-      settings: [
-        'Game Mode: Steal The Bacon',
-        'Time Limit: 6 minutes',
-        'Point Limit: 9 points',
-        'Power-ups: Shield, Mask, Super Engine, Triple Missile and Triple Bomb DISABLED',
-      ],
-    },
     {
       name: 'Balanced Steal The Bacon',
       settings: [
         'Game Mode: Steal The Bacon',
         'Time Limit: 6 minutes',
         'Point Limit: 9 points',
-        'Power-ups: Only Single Bomb, Single Missile and Turbo Canister ENABLED',
+        'Power-ups: ENABLED ONLY Single Bomb, Single Missile and Turbo Canister',
       ],
     },
   ],

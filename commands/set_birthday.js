@@ -39,10 +39,7 @@ module.exports = {
     ];
     const days = range(31, 1);
 
-    return message.channel.send(`Select year. Waiting 1 minute.
-\`\`\`
-${years.join('\n')}
-\`\`\``).then((confirmMessage) => {
+    return message.channel.send('Please enter the year. The value must be between 1970 and 2010. Waiting 1 minute.').then((confirmMessage) => {
       const filter = (m) => m.author.id === message.author.id;
       const options = { max: 1, time: 60000, errors: ['time'] };
 
@@ -74,10 +71,7 @@ ${months.map((m, i) => m = `${i + 1} - ${m}`).join('\n')}
                   month = `0${month}`;
                 }
 
-                return message.channel.send(`Select day. Waiting 1 minute.
-\`\`\`
-${days.join('\n')}
-\`\`\``).then((confirmMessage) => {
+                return message.channel.send('Please enter the day. The value must be between 1 and 31. Waiting 1 minute.').then((confirmMessage) => {
                   message.channel.awaitMessages(filter, options).then((collectedMessages) => {
                     const collectedMessage = collectedMessages.first();
                     const { content } = collectedMessage;

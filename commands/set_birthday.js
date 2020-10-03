@@ -15,6 +15,11 @@ module.exports = {
   description: 'Set your birthday.',
   guildOnly: true,
   execute(message, args) {
+    if (args.length > 0 && args[0] === 'unset') {
+      Player.updateOne({ discordId: message.author.id }, { birthday: null }).exec();
+      return message.channel.send('Your birthday has been unset.');
+    }
+
     const currentDate = new Date();
 
     const years = range(40, currentDate.getFullYear() - 50);

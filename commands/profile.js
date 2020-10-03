@@ -82,7 +82,7 @@ function getEmbed(guildMember, fields) {
       text: `ID: ${guildMember.user.id}`,
     },
     author: {
-      name: `${guildMember.user.username}#${guildMember.user.discriminator}${guildMember.user.bot ? ' (Bot)' : ''}`,
+      name: `${guildMember.user.username}#${guildMember.user.discriminator}'s profile${guildMember.user.bot ? ' (Bot)' : ''}`,
       icon_url: avatarUrl,
     },
     fields,

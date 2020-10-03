@@ -21,12 +21,13 @@ const ranks = {
  * @returns {number | string}
  */
 function getRankingPosition(rank, mode) {
+  mode = mode.toLowerCase();
   let position;
 
   if (!rank[mode]) {
     position = '-';
   } else {
-    position = parseInt(rank[mode].rank, 10);
+    position = rank[mode].position + 1;
 
     if (Number.isNaN(position)) {
       position = '-';
@@ -34,6 +35,29 @@ function getRankingPosition(rank, mode) {
   }
 
   return position;
+}
+
+/**
+ * Gets the ranking rating for a given mode
+ * @param rank
+ * @param mode
+ * @returns {number | string}
+ */
+function getRankingRating(rank, mode) {
+  mode = mode.toLowerCase();
+  let rating;
+
+  if (!rank[mode]) {
+    rating = '-';
+  } else {
+    rating = parseInt(rank[mode].rank, 10);
+
+    if (Number.isNaN(rating)) {
+      rating = '-';
+    }
+  }
+
+  return rating;
 }
 
 /**
@@ -96,6 +120,7 @@ module.exports = {
   usage: '@user',
   description: 'Check a player profile.',
   guildOnly: true,
+  aliases: ['p', 'rank'],
   execute(message, args) {
     let user = message.author;
 
@@ -110,26 +135,38 @@ module.exports = {
     const guildMember = message.guild.member(user);
     const embedFields = [];
 
-    console.log(guildMember.guild.presences);
-
     Player.findOne({ discordId: user.id }).then((player) => {
-      if (!player) {
-        return message.channel.send('Player not found.');
-      }
-
-      /* Profile */
       Clan.find().then((clans) => {
+        /* Profile */
         let voiceChat = [];
+        let psn;
+        let flag;
+        let nat;
+        let favCharacter;
+        let favTrack;
 
-        if (player.discordVc) {
-          voiceChat.push('Discord');
+        if (!player) {
+          psn = '-';
+          flag = '-';
+          nat = '-';
+          favCharacter = '-';
+          favTrack = '-';
+        } else {
+          psn = player.psn || '-';
+          flag = player.flag || '-';
+          nat = player.nat || '-';
+          favCharacter = player.favCharacter || '-';
+          favTrack = player.favTrack || '-';
+
+          if (player.discordVc) {
+            voiceChat.push('Discord');
+          }
+
+          if (player.ps4Vc) {
+            voiceChat.push('PS4');
+          }
         }
 
-        if (player.ps4Vc) {
-          voiceChat.push('PS4');
-        }
-
-        /* Show nothing if option was never set */
         if (voiceChat.length < 1) {
           voiceChat = ['-'];
         }
@@ -149,16 +186,20 @@ module.exports = {
         }
 
         const profile = [
-          `**PSN**: ${player.psn}`,
+          `**PSN**: ${psn}`,
           `**Clans**: ${playerClans.join(', ')}`,
-          `**Country**: ${player.flag}`,
+          `**Country**: ${flag}`,
           `**Voice Chat**: ${voiceChat.join(', ')}`,
-          `**NAT**: ${player.nat || '-'}`,
+          `**NAT**: ${nat}`,
           `**Joined**: ${guildMember.joinedAt.toLocaleString('default', { month: 'short' })} ${guildMember.joinedAt.getDay()}, ${guildMember.joinedAt.getFullYear()}`,
         ];
 
         if (guildMember.roles.cache.find((r) => r.name.toLowerCase() === 'ranked verified')) {
           profile.push('**Ranked Verified** :white_check_mark:');
+        }
+
+        if (guildMember.user.bot) {
+          profile.push('**Discord Bot** :robot:');
         }
 
         embedFields.push({
@@ -168,8 +209,8 @@ module.exports = {
         });
 
         const gameData = [
-          `**Fav. Character**: ${player.favCharacter || '-'}`,
-          `**Fav. Track**: ${player.favTrack || '-'}`,
+          `**Fav. Character**: ${favCharacter}`,
+          `**Fav. Track**: ${favTrack}`,
         ];
 
         embedFields.push({
@@ -181,11 +222,11 @@ module.exports = {
         embedFields.push({ name: '\u200B', value: '\u200B' });
 
         /* Ranks */
-        Rank.findOne({ name: player.psn }).then((rank) => {
-          let playerranks;
+        Rank.findOne({ name: psn }).then((rank) => {
+          let playerRanks;
 
           if (!rank) {
-            playerranks = [
+            playerRanks = [
               '**FFA**: -',
               '**Itemless**: -',
               '**Duos**: -',
@@ -193,18 +234,24 @@ module.exports = {
               '**4 vs. 4**: -',
             ];
           } else {
-            playerranks = [
-              `**FFA**: ${getRankingPosition(rank, ranks[ITEMS])}`,
-              `**Itemless**: ${getRankingPosition(rank, ranks[ITEMLESS])}`,
-              `**Duos**: ${getRankingPosition(rank, ranks[DUOS])}`,
-              `**Battle**: ${getRankingPosition(rank, ranks[BATTLE])}`,
-              `**4 vs. 4**: ${getRankingPosition(rank, ranks[_4V4])}`,
+            const itemsRanking = getRankingPosition(rank, ranks[ITEMS]);
+            const itemlessRanking = getRankingPosition(rank, ranks[ITEMLESS]);
+            const duosRanking = getRankingPosition(rank, ranks[DUOS]);
+            const battleRanking = getRankingPosition(rank, ranks[BATTLE]);
+            const _4v4Ranking = getRankingPosition(rank, ranks[_4V4]);
+
+            playerRanks = [
+              `**FFA**: ${itemsRanking !== '-' ? `#${itemsRanking} - ${getRankingRating(rank, ranks[ITEMS])}` : '-'}`,
+              `**Itemless**: ${itemlessRanking !== '-' ? `#${itemlessRanking} - ${getRankingRating(rank, ranks[ITEMLESS])}` : '-'}`,
+              `**Duos**: ${duosRanking !== '-' ? `#${duosRanking} - ${getRankingRating(rank, ranks[DUOS])}` : '-'}`,
+              `**Battle**: ${battleRanking !== '-' ? `#${battleRanking} - ${getRankingRating(rank, ranks[BATTLE])}` : '-'}`,
+              `**4 vs. 4**: ${_4v4Ranking !== '-' ? `#${_4v4Ranking} - ${getRankingRating(rank, ranks[_4V4])}` : '-'}`,
             ];
           }
 
           embedFields.push({
             name: ':checkered_flag: Rankings',
-            value: playerranks.join('\n'),
+            value: playerRanks.join('\n'),
             inline: true,
           });
 
@@ -295,5 +342,7 @@ module.exports = {
         });
       });
     });
+
+    return true;
   },
 };

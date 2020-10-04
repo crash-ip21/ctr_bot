@@ -144,6 +144,7 @@ module.exports = {
         let nat;
         let favCharacter;
         let favTrack;
+        let birthday;
 
         if (!player) {
           psn = '-';
@@ -151,12 +152,20 @@ module.exports = {
           nat = '-';
           favCharacter = '-';
           favTrack = '-';
+          birthday = '-';
         } else {
           psn = player.psn || '-';
           flag = player.flag || '-';
           nat = player.nat || '-';
           favCharacter = player.favCharacter || '-';
           favTrack = player.favTrack || '-';
+
+          if (!player.birthday) {
+            birthday = '-';
+          } else {
+            const birthDate = new Date(player.birthday);
+            birthday = `${birthDate.toLocaleString('default', { month: 'short' })} ${birthDate.getDate()}, ${birthDate.getFullYear()}`;
+          }
 
           if (player.discordVc) {
             voiceChat.push('Discord');
@@ -171,27 +180,14 @@ module.exports = {
           voiceChat = ['-'];
         }
 
-        let playerClans = [];
-
-        clans.forEach((c) => {
-          const role = guildMember.roles.cache.find((r) => r.name.toLowerCase() === c.fullName.toLowerCase());
-
-          if (role) {
-            playerClans.push(c.shortName);
-          }
-        });
-
-        if (playerClans.length < 1) {
-          playerClans = ['-'];
-        }
-
         const profile = [
           `**PSN**: ${psn}`,
-          `**Clans**: ${playerClans.join(', ')}`,
           `**Country**: ${flag}`,
+          `**Birthday**: ${birthday}`,
           `**Voice Chat**: ${voiceChat.join(', ')}`,
-          `**NAT**: ${nat}`,
-          `**Joined**: ${guildMember.joinedAt.toLocaleString('default', { month: 'short' })} ${guildMember.joinedAt.getDay()}, ${guildMember.joinedAt.getFullYear()}`,
+          `**NAT Type**: ${nat}`,
+          `**Joined**: ${guildMember.joinedAt.toLocaleString('default', { month: 'short' })} ${guildMember.joinedAt.getDate()}, ${guildMember.joinedAt.getFullYear()}`,
+          `**Registered**: ${guildMember.user.createdAt.toLocaleString('default', { month: 'short' })} ${guildMember.user.createdAt.getDate()}, ${guildMember.user.createdAt.getFullYear()}`,
         ];
 
         if (guildMember.roles.cache.find((r) => r.name.toLowerCase() === 'ranked verified')) {
@@ -208,7 +204,23 @@ module.exports = {
           inline: true,
         });
 
+        /* Game Data */
+        let playerClans = [];
+
+        clans.forEach((c) => {
+          const role = guildMember.roles.cache.find((r) => r.name.toLowerCase() === c.fullName.toLowerCase());
+
+          if (role) {
+            playerClans.push(c.shortName);
+          }
+        });
+
+        if (playerClans.length < 1) {
+          playerClans = ['-'];
+        }
+
         const gameData = [
+          `**Clans**: ${playerClans.join(', ')}`,
           `**Fav. Character**: ${favCharacter}`,
           `**Fav. Track**: ${favTrack}`,
         ];
@@ -290,12 +302,17 @@ module.exports = {
             achievements.push('Server Booster');
           }
 
+          const currentDate = new Date();
+          if (currentDate.getFullYear() - guildMember.joinedAt.getFullYear() >= 1) {
+            achievements.push('Member for over 1 year');
+          }
+
           if (achievements.length < 1) {
             achievements.push('-');
           }
 
           embedFields.push({
-            name: ':trophy: Achievements',
+            name: `:trophy: Achievements (${achievements.length})`,
             value: achievements.join('\n'),
             inline: true,
           });
@@ -305,7 +322,7 @@ module.exports = {
           /* Roles */
           const roles = [];
 
-          guildMember.roles.cache.forEach((r) => {
+          guildMember.roles.cache.sort((a, b) => b.rawPosition - a.rawPosition || b.id - a.id).forEach((r) => {
             if (r.name.toLowerCase() !== '@everyone') {
               roles.push(`<@&${r.id}>`);
             }
@@ -316,7 +333,7 @@ module.exports = {
           }
 
           embedFields.push({
-            name: ':art: Roles',
+            name: `:art: Roles (${roles.length})`,
             value: roles.join(', '),
             inline: true,
           });
@@ -325,6 +342,7 @@ module.exports = {
           const commands = [
             '`!set_psn`',
             '`!set_country`',
+            '`!set_birthday`',
             '`!set_nat`',
             '`!set_voice_chat`',
             '`!set_character`',

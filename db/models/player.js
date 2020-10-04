@@ -13,6 +13,7 @@ const Clan = new Schema({
   ps4Vc: Boolean,
   favCharacter: String,
   favTrack: String,
+  birthday: String,
 });
 
 module.exports = model('players', Clan);

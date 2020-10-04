@@ -64,7 +64,7 @@ ${months.map((m, i) => m = `${i + 1} - ${m}`).join('\n')}
               confirmMessage.delete();
               collectedMessage.delete();
 
-              if (range(12, 0).includes(Number(content))) {
+              if (range(12, 1).includes(Number(content))) {
                 let month = content;
 
                 if (month < 10) {

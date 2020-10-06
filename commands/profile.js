@@ -1,3 +1,4 @@
+const moment = require('moment');
 const Clan = require('../db/models/clans');
 const Player = require('../db/models/player');
 const Rank = require('../db/models/rank');
@@ -302,17 +303,20 @@ module.exports = {
             achievements.push('Server Booster');
           }
 
-          const currentDate = new Date();
-          if (currentDate.getFullYear() - guildMember.joinedAt.getFullYear() >= 1) {
+          const currentDate = moment(new Date());
+          const joinDate = moment(guildMember.joinedAt);
+
+          if (currentDate.diff(joinDate, 'years', true) > 1) {
             achievements.push('Member for over 1 year');
           }
 
-          if (achievements.length < 1) {
-            achievements.push('-');
+          const achievementCount = achievements.length;
+          if (achievementCount < 1) {
+            achievements.push('None');
           }
 
           embedFields.push({
-            name: `:trophy: Achievements (${achievements.length})`,
+            name: `:trophy: Achievements (${achievementCount})`,
             value: achievements.join('\n'),
             inline: true,
           });
@@ -328,12 +332,13 @@ module.exports = {
             }
           });
 
-          if (roles.length < 1) {
+          const roleCount = roles.length;
+          if (roleCount < 1) {
             roles.push('None');
           }
 
           embedFields.push({
-            name: `:art: Roles (${roles.length})`,
+            name: `:art: Roles (${roleCount})`,
             value: roles.join(', '),
             inline: true,
           });

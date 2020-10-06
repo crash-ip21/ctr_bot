@@ -1,3 +1,4 @@
+const moment = require('moment');
 const Player = require('../db/models/player');
 
 /**
@@ -87,6 +88,11 @@ ${months.map((m, i) => m = `${i + 1} - ${m}`).join('\n')}
                       }
 
                       const birthday = `${year}-${month}-${day}`;
+                      const birthDate = moment(birthday);
+
+                      if (!birthDate.isValid()) {
+                        return message.channel.send(`The date "${birthday}" is invalid.`);
+                      }
 
                       Player.updateOne({ discordId: message.author.id }, { birthday }).exec();
                       message.channel.send(`Your birthday has been set to ${birthday}.`);

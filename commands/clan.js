@@ -231,22 +231,18 @@ Edit clans:
 
               Player.find({ discordId: { $in: memberIds } }).then((docs) => {
                 const psns = [];
+                const psnMapping = {};
 
                 docs.forEach((p) => {
                   if (p.psn) {
                     psns.push(p.psn);
+                    psnMapping[p.discordId] = p.psn;
                   }
                 });
 
                 Rank.find({ name: { $in: psns } }).then((ranks) => {
                   const superScores = {};
                   let superScoreSum = 0;
-
-                  ranks.forEach((r) => {
-                    const superScore = getSuperScore(r);
-                    superScores[r.name] = superScore;
-                    superScoreSum += superScore;
-                  });
 
                   members
                     .sort((a, b) => a.displayName.localeCompare(b.displayName))
@@ -256,6 +252,17 @@ Edit clans:
                           captains.push(m);
                         } else {
                           players.push(m);
+                        }
+
+                        const psn = psnMapping[m.user.id] || null;
+                        if (psn) {
+                          const rank = ranks.find((r) => r.name === psn);
+
+                          if (rank) {
+                            const superScore = getSuperScore(rank);
+                            superScores[psn] = superScore;
+                            superScoreSum += superScore;
+                          }
                         }
                       }
                     });

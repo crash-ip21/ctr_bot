@@ -15,6 +15,23 @@ function createCaseInsensitiveRegEx(s) {
   return new RegExp(`^${(escapeRegExp(s))}$`, 'i');
 }
 
+/**
+ * Returns a player's superscore
+ * @param rank
+ * @returns {number}
+ */
+function getSuperScore(rank) {
+  const baseRank = 0;
+
+  const itemsRank = rank[ITEMS].rank || baseRank;
+  const itemlessRank = rank[ITEMLESS].rank || baseRank;
+  const duosRank = rank[DUOS].rank || baseRank;
+  const battleRank = rank[BATTLE].rank || baseRank;
+  const _4v4Rank = rank[_4V4].rank || baseRank;
+
+  return Math.floor((itemsRank * 0.1) + (itemlessRank * 0.3) + (duosRank * 0.2) + (battleRank * 0.05) + (_4v4Rank * 0.4));
+}
+
 module.exports = {
   name: 'clans',
   description(message) {
@@ -69,16 +86,9 @@ Edit clans:
 
             Rank.find({ name: { $in: psns } }).then((ranks) => {
               const superScores = [];
-              const baseRank = 0;
 
               ranks.forEach((r) => {
-                const itemsRank = r[ITEMS].rank || baseRank;
-                const itemlessRank = r[ITEMLESS].rank || baseRank;
-                const duosRank = r[DUOS].rank || baseRank;
-                const battleRank = r[BATTLE].rank || baseRank;
-                const _4v4Rank = r[_4V4].rank || baseRank;
-
-                superScores[r.name] = Math.floor(((itemsRank * 0.1) + (itemlessRank * 0.3) + (duosRank * 0.2) + (_4v4Rank * 0.4)) + (battleRank * 0.05));
+                superScores[r.name] = getSuperScore(r);
               });
 
               for (const i in clanMembers) {
@@ -220,34 +230,55 @@ Edit clans:
               const memberIds = members.map((m) => m.id);
 
               Player.find({ discordId: { $in: memberIds } }).then((docs) => {
-                members
-                  .sort((a, b) => a.displayName.localeCompare(b.displayName))
-                  .forEach((m) => {
-                    if (m.roles.cache.has(clanRole.id)) {
-                      if (m.roles.cache.find((r) => r.name === 'Captain')) {
-                        captains.push(m);
-                      } else {
-                        players.push(m);
-                      }
-                    }
+                const psns = [];
+
+                docs.forEach((p) => {
+                  if (p.psn) {
+                    psns.push(p.psn);
+                  }
+                });
+
+                Rank.find({ name: { $in: psns } }).then((ranks) => {
+                  const superScores = {};
+                  let superScoreSum = 0;
+
+                  ranks.forEach((r) => {
+                    const superScore = getSuperScore(r);
+                    superScores[r.name] = superScore;
+                    superScoreSum += superScore;
                   });
 
-                const toPing = (p) => {
-                  let s = p.toString();
-                  const player = docs.find((f) => f.discordId === p.user.id);
-                  if (player && player.flag) s += ` ${player.flag}`;
-                  return s;
-                };
-                const description = `**${clanRole.name}** (${clanRole.members.size} members)
+                  members
+                    .sort((a, b) => a.displayName.localeCompare(b.displayName))
+                    .forEach((m) => {
+                      if (m.roles.cache.has(clanRole.id)) {
+                        if (m.roles.cache.find((r) => r.name === 'Captain')) {
+                          captains.push(m);
+                        } else {
+                          players.push(m);
+                        }
+                      }
+                    });
 
+                  const averageSuperScore = Math.floor(superScoreSum / clanRole.members.size);
+
+                  const toPing = (p) => {
+                    let s = p.toString();
+                    const player = docs.find((f) => f.discordId === p.user.id);
+                    if (player && player.flag) s += ` ${player.flag}${superScores[player.psn] ? ` (Score: ${superScores[player.psn]})` : ''}`;
+                    return s;
+                  };
+                  const description = `**${clanRole.name}** (Score: ${averageSuperScore} - Members: ${clanRole.members.size})
+  
 Captain:
 ${captains.map(toPing).join('\n')}
 
 Members:
 ${players.map(toPing).join('\n')}`;
 
-                message.channel.send('...').then((m) => {
-                  m.edit(description).then();
+                  message.channel.send('...').then((m) => {
+                    m.edit(description).then();
+                  });
                 });
               });
             });

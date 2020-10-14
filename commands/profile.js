@@ -310,6 +310,10 @@ module.exports = {
             achievements.push('Member for over 1 year');
           }
 
+          if (player.psn && player.flag && player.nat && player.birthday && (player.discordVc || player.ps4Vc) && player.favCharacter && player.favCharacter) {
+            achievements.push('Complete Profile');
+          }
+
           const achievementCount = achievements.length;
           if (achievementCount < 1) {
             achievements.push('None');

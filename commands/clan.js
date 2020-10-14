@@ -1,6 +1,11 @@
 const Clan = require('../db/models/clans');
 const Player = require('../db/models/player');
+const Rank = require('../db/models/rank');
 const createPageableContent = require('../utils/createPageableContent');
+
+const {
+  _4V4, BATTLE, DUOS, ITEMLESS, ITEMS,
+} = require('../db/models/ranked_lobbies');
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
@@ -28,33 +33,92 @@ Edit clans:
     if (!args.length) {
       Clan.find().then((clans) => {
         message.guild.members.fetch().then((members) => {
-          // const sortedClans = clans.sort(() => 0.5 - Math.random());
+          const discordIds = [];
+          const clanMembers = {};
 
-          let membersCount = 0;
-
-          const clansObjects = [];
           clans.forEach((c) => {
-            const clanRole = message.guild.roles.cache.find((r) => r.name.toLowerCase() === c.fullName.toLowerCase());
-            if (clanRole) {
-              const { size } = clanRole.members;
-              membersCount += size;
-              clansObjects.push({
-                shortName: c.shortName,
-                fullName: c.fullName,
-                size,
-              });
-            }
+            clanMembers[c.shortName] = {
+              shortName: c.shortName,
+              fullName: c.fullName,
+              members: [],
+            };
+
+            members.forEach((m) => {
+              const role = m.roles.cache.find((r) => r.name.toLowerCase() === c.fullName.toLowerCase());
+
+              if (role) {
+                clanMembers[c.shortName].members.push(m.user.id);
+
+                if (!discordIds.includes(m.user.id)) {
+                  discordIds.push(m.user.id);
+                }
+              }
+            });
           });
 
-          const clanList = clansObjects
-            .sort((a, b) => b.size - a.size)
-            .map((c) => `${c.shortName}: **${c.fullName}** (${c.size} members)`);
-          createPageableContent(message.channel, message.author.id, {
-            outputType: 'embed',
-            elements: clanList,
-            elementsPerPage: 20,
-            embedOptions: { heading: `CTR competitive clans (${clanList.length})` },
-            reactionCollectorOptions: { time: 3600000 },
+          Player.find({ discordId: { $in: discordIds } }).then((players) => {
+            const psns = [];
+            const psnMapping = {};
+
+            players.forEach((p) => {
+              if (p.psn) {
+                psns.push(p.psn);
+                psnMapping[p.discordId] = p.psn;
+              }
+            });
+
+            Rank.find({ name: { $in: psns } }).then((ranks) => {
+              const superScores = [];
+              const baseRank = 0;
+
+              ranks.forEach((r) => {
+                const itemsRank = r[ITEMS].rank || baseRank;
+                const itemlessRank = r[ITEMLESS].rank || baseRank;
+                const duosRank = r[DUOS].rank || baseRank;
+                const battleRank = r[BATTLE].rank || baseRank;
+                const _4v4Rank = r[_4V4].rank || baseRank;
+
+                superScores[r.name] = Math.floor(((itemsRank * 0.1) + (itemlessRank * 0.3) + (duosRank * 0.2) + (_4v4Rank * 0.4)) + (battleRank * 0.05));
+              });
+
+              for (const i in clanMembers) {
+                let superScoreSum = 0;
+
+                clanMembers[i].members.forEach((m) => {
+                  const psn = psnMapping[m];
+                  superScoreSum += superScores[psn] || 0;
+                });
+
+                if (clanMembers[i].members.length > 1) {
+                  clanMembers[i].score = Math.floor(superScoreSum / clanMembers[i].members.length);
+                } else {
+                  clanMembers[i].score = superScoreSum;
+                }
+              }
+
+              const transformed = [];
+
+              for (const x in clanMembers) {
+                transformed.push({
+                  shortName: clanMembers[x].shortName,
+                  fullName: clanMembers[x].fullName,
+                  members: clanMembers[x].members,
+                  score: clanMembers[x].score,
+                });
+              }
+
+              const clanList = transformed
+                .sort((a, b) => b.score - a.score)
+                .map((c, i) => `${i + 1}. **${c.fullName}** [${c.shortName}] - Score: ${c.score} - Members: ${c.members.length}`);
+
+              createPageableContent(message.channel, message.author.id, {
+                outputType: 'embed',
+                elements: clanList,
+                elementsPerPage: 20,
+                embedOptions: { heading: `CTR Clan Ranking (${clanList.length} Clans)` },
+                reactionCollectorOptions: { time: 3600000 },
+              });
+            });
           });
         });
       });

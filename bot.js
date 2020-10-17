@@ -16,7 +16,7 @@ const Command = require('./db/models/command');
 const Config = require('./db/models/config');
 const sendLogMessage = require('./utils/sendLogMessage');
 const { parseWCSignup, parseAndCheckUnique } = require('./utils/SignupsParser');
-const { parseRandomSignup: parseSignup } = require('./utils/SignupsParser');
+const { parseTTSignup: parseSignup } = require('./utils/SignupsParser');
 const { flags } = require('./utils/flags');
 const Mute = require('./db/models/mutes');
 

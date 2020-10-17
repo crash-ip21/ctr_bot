@@ -8,7 +8,7 @@ const {
  * @returns {number}
  */
 function calculateSuperScore(rank) {
-  const baseRank = 0;
+  const baseRank = 1000;
 
   const itemsRank = rank[ITEMS].rank || baseRank;
   const itemlessRank = rank[ITEMLESS].rank || baseRank;

@@ -40,23 +40,21 @@ module.exports.battleModes = [
       ],
     },
     {
+      name: 'Balanced Last Kart Driving',
+      settings: [
+        'Game Mode: Last Kart Driving',
+        'Life Limit: 9 lives',
+        'Time Limit: 6 minutes',
+        'Power-ups: DISABLED: Beaker, Shield, Mask, Super Engine, Triple Missile and Triple Bomb',
+      ],
+    },
+    {
       name: 'Bomb Snipe Mode',
       settings: [
         'Game Mode: Last Kart Driving',
         'Life Limit: 9 lives',
         'Time Limit: 6 minutes',
         'Power-ups: ENABLED ONLY Single Bomb and Turbo Canister',
-      ],
-    },
-  ],
-  [
-    {
-      name: 'Balanced Steal The Bacon',
-      settings: [
-        'Game Mode: Steal The Bacon',
-        'Time Limit: 6 minutes',
-        'Point Limit: 9 points',
-        'Power-ups: ENABLED ONLY Single Bomb, Single Missile and Turbo Canister',
       ],
     },
   ],

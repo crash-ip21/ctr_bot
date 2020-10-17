@@ -2,6 +2,7 @@ const Clan = require('../db/models/clans');
 const Player = require('../db/models/player');
 const Rank = require('../db/models/rank');
 const createPageableContent = require('../utils/createPageableContent');
+const calculateSuperScore = require('../utils/calculateSuperScore');
 
 const {
   _4V4, BATTLE, DUOS, ITEMLESS, ITEMS,
@@ -16,20 +17,17 @@ function createCaseInsensitiveRegEx(s) {
 }
 
 /**
- * Returns a player's superscore
- * @param rank
- * @returns {number}
+ * Returns an empty rank object
+ * @return {object}
  */
-function getSuperScore(rank) {
-  const baseRank = 0;
-
-  const itemsRank = rank[ITEMS].rank || baseRank;
-  const itemlessRank = rank[ITEMLESS].rank || baseRank;
-  const duosRank = rank[DUOS].rank || baseRank;
-  const battleRank = rank[BATTLE].rank || baseRank;
-  const _4v4Rank = rank[_4V4].rank || baseRank;
-
-  return Math.floor((itemsRank * 0.1) + (itemlessRank * 0.3) + (duosRank * 0.2) + (battleRank * 0.05) + (_4v4Rank * 0.4));
+function getDummyRanks() {
+  return {
+    [ITEMS]: { rank: null },
+    [ITEMLESS]: { rank: null },
+    [DUOS]: { rank: null },
+    [BATTLE]: { rank: null },
+    [_4V4]: { rank: null },
+  };
 }
 
 module.exports = {
@@ -88,19 +86,25 @@ Edit clans:
               const superScores = [];
 
               ranks.forEach((r) => {
-                superScores[r.name] = getSuperScore(r);
+                superScores[r.name] = calculateSuperScore(r);
               });
 
               for (const i in clanMembers) {
                 let superScoreSum = 0;
+                clanMembers[i].superScoreCount = 0;
 
                 clanMembers[i].members.forEach((m) => {
                   const psn = psnMapping[m];
-                  superScoreSum += superScores[psn] || 0;
+                  const superScore = superScores[psn] || calculateSuperScore(getDummyRanks());
+                  superScoreSum += superScore;
+
+                  if (superScore > 0) {
+                    clanMembers[i].superScoreCount += 1;
+                  }
                 });
 
                 if (clanMembers[i].members.length > 1) {
-                  clanMembers[i].score = Math.floor(superScoreSum / clanMembers[i].members.length);
+                  clanMembers[i].score = Math.floor(superScoreSum / clanMembers[i].superScoreCount);
                 } else {
                   clanMembers[i].score = superScoreSum;
                 }
@@ -243,6 +247,7 @@ Edit clans:
                 Rank.find({ name: { $in: psns } }).then((ranks) => {
                   const superScores = {};
                   let superScoreSum = 0;
+                  let superScoreCount = 0;
 
                   members
                     .sort((a, b) => a.displayName.localeCompare(b.displayName))
@@ -259,7 +264,13 @@ Edit clans:
                           const rank = ranks.find((r) => r.name === psn);
 
                           if (rank) {
-                            const superScore = getSuperScore(rank);
+                            const superScore = calculateSuperScore(rank);
+                            superScores[psn] = superScore;
+                            superScoreSum += superScore;
+
+                            superScoreCount += 1;
+                          } else {
+                            const superScore = calculateSuperScore(getDummyRanks());
                             superScores[psn] = superScore;
                             superScoreSum += superScore;
                           }
@@ -267,7 +278,7 @@ Edit clans:
                       }
                     });
 
-                  const averageSuperScore = Math.floor(superScoreSum / clanRole.members.size);
+                  const averageSuperScore = Math.floor(superScoreSum / superScoreCount);
 
                   const toPing = (p) => {
                     let s = p.toString();

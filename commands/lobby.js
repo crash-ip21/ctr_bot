@@ -363,7 +363,7 @@ async function findRoomChannel(guildId, n) {
 }
 
 function startLobby(docId) {
-  RankedLobby.findOneAndUpdate({ _id: docId }, { started: true, startedAt: new Date() }, { new: true })
+  RankedLobby.findOneAndUpdate({ _id: docId, started: false }, { started: true, startedAt: new Date() }, { new: true })
     .then((doc) => {
       client.guilds.cache
         .get(doc.guild).channels.cache
@@ -506,7 +506,8 @@ ${settings.join('\n\n')}\`\`\``);
             });
           });
         });
-    });
+    })
+    .catch(console.error);
 }
 
 function diffMinutes(dt2, dt1) {

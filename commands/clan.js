@@ -4,30 +4,12 @@ const Rank = require('../db/models/rank');
 const createPageableContent = require('../utils/createPageableContent');
 const calculateSuperScore = require('../utils/calculateSuperScore');
 
-const {
-  _4V4, BATTLE, DUOS, ITEMLESS, ITEMS,
-} = require('../db/models/ranked_lobbies');
-
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
 function createCaseInsensitiveRegEx(s) {
   return new RegExp(`^${(escapeRegExp(s))}$`, 'i');
-}
-
-/**
- * Returns an empty rank object
- * @return {object}
- */
-function getDummyRanks() {
-  return {
-    [ITEMS]: { rank: null },
-    [ITEMLESS]: { rank: null },
-    [DUOS]: { rank: null },
-    [BATTLE]: { rank: null },
-    [_4V4]: { rank: null },
-  };
 }
 
 module.exports = {
@@ -95,7 +77,7 @@ Edit clans:
 
                 clanMembers[i].members.forEach((m) => {
                   const psn = psnMapping[m];
-                  const superScore = superScores[psn] || calculateSuperScore(getDummyRanks());
+                  const superScore = superScores[psn] || 0;
                   superScoreSum += superScore;
 
                   if (superScore > 0) {
@@ -269,10 +251,6 @@ Edit clans:
                             superScoreSum += superScore;
 
                             superScoreCount += 1;
-                          } else {
-                            const superScore = calculateSuperScore(getDummyRanks());
-                            superScores[psn] = superScore;
-                            superScoreSum += superScore;
                           }
                         }
                       }

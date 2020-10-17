@@ -48,6 +48,7 @@ function checkRepetitions(message, data, fields, parse) {
       fields.forEach((field) => {
         if (field.type === 'boolean') return;
         if (field.type === 'flag') return;
+        if (field.name === 'console') return;
         let key = field.name;
         if (field.type === 'mention') {
           key = `${key}Id`;

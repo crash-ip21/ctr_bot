@@ -122,7 +122,7 @@ module.exports = {
   usage: '@user',
   description: 'Check a player profile.',
   guildOnly: true,
-  aliases: ['p', 'rank'],
+  aliases: ['p'],
   execute(message, args) {
     let user = message.author;
 

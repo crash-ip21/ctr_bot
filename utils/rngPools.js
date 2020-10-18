@@ -19,12 +19,12 @@ async function rngPools(doc) {
     case ITEMLESS:
       N = 5;
       pools = _4v4Pools;
-      pools[3] = pools[3].splice(7, 1); // Remove Megamix Mania
+      pools[3].splice(7, 1); // Remove Megamix Mania
       break;
     case _4V4:
       N = 10;
       pools = _4v4Pools;
-      pools[2] = pools[2].splice(7, 1); // Remove Spyro Circuit
+      pools[2].splice(7, 1); // Remove Spyro Circuit
       break;
     case BATTLE:
       N = 5;

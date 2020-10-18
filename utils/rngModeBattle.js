@@ -1,55 +1,35 @@
 const { battleModes } = require('./modes_battle');
 
-async function rngModeBattle() {
-  let modes = [];
+async function rngModeBattle(tracks) {
+  const modes = [];
+  const modeNames = [];
 
   battleModes.forEach((battleMode) => {
     battleMode.forEach((mode) => {
-      modes.push(mode.name);
+      modes.push(mode);
+      modeNames.push(mode.name);
     });
   });
 
   const N = 5;
 
-  modes = [modes.flat()];
+  const randomModes = [];
 
-  const modesSize = modes.flat().length;
-  const modeSlice = N / modes.length;
+  for (let i = 0; i < N; i++) {
+    while (true) {
+      const rng = Math.floor(modeNames.length * Math.random());
+      const mode = modes.find((m) => m.name === modeNames[rng]);
 
-  if (!Number.isInteger(modeSlice)) {
-    throw Error('Something is wrong with modes');
+      if (mode.tracks.length < 1 || mode.tracks.includes(tracks[i])) {
+        randomModes.push(modeNames[rng]);
+        modeNames.splice(rng, 1);
+
+        break;
+      }
+    }
   }
 
-  const randomFractionsNumber = modesSize + N;
-
-  const rng = Array(randomFractionsNumber).fill(0).map(() => Math.random());
-
-  let maps = [];
-
-  modes.forEach((mode, i) => {
-    const sliceRng = rng.splice(0, mode.length);
-
-    const randomizedMode = mode.map((p, i) => {
-      const rngNumber = sliceRng[i];
-      return [p, rngNumber];
-    })
-      .sort((a, b) => a[1] - b[1])
-      .map((p) => p[0]);
-
-    const slice = randomizedMode.slice(0, modeSlice);
-    maps.push(...slice);
-  });
-
-  const sliceRng = rng.splice(0, maps.length);
-
-  maps = maps.map((p, i) => {
-    const rngNumber = sliceRng[i];
-    return [p, rngNumber];
-  })
-    .sort((a, b) => a[1] - b[1])
-    .map((p) => p[0]);
-
-  return maps;
+  return randomModes;
 }
 
 module.exports = rngModeBattle;

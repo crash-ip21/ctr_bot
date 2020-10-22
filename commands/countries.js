@@ -1,23 +1,6 @@
 const Player = require('../db/models/player');
 const createPageableContent = require('../utils/createPageableContent');
 
-/**
- * Returns the embed
- * @param flag
- * @param players
- * @param maxPlayers
- * @param page
- * @param pages
- * @returns {string}
- */
-function getOutput(flag, players, maxPlayers, page, pages) {
-  return `**Players from ${flag} (${maxPlayers})**
-  
-${players.join('\n')}
-
-> Page ${page} of ${pages}`;
-}
-
 module.exports = {
   name: 'countries',
   description: 'Countries of members.',
@@ -41,9 +24,15 @@ module.exports = {
             $sort: { count: -1 },
           },
         ]).then((counts) => {
-          const out = counts.map((c) => `${c._id} ${c.count}`).join('\t');
+          const elements = counts.map((c) => `${c._id} - ${c.count} players`);
 
-          message.channel.send(out);
+          createPageableContent(message.channel, message.author.id, {
+            outputType: 'embed',
+            elements,
+            elementsPerPage: 20,
+            embedOptions: { heading: 'Countries' },
+            reactionCollectorOptions: { time: 3600000 },
+          });
         });
       } else {
         const flag = args.shift();

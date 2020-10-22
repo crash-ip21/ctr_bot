@@ -48,6 +48,7 @@ function checkRepetitions(message, data, fields, parse) {
       fields.forEach((field) => {
         if (field.type === 'boolean') return;
         if (field.type === 'flag') return;
+        if (field.name === 'console') return;
         let key = field.name;
         if (field.type === 'mention') {
           key = `${key}Id`;
@@ -534,6 +535,70 @@ PS4 VC: no
 Discord VC: yes
 Host: yes`;
 module.exports.parseRandomSignup = parseRandomSignup;
+
+const fieldsTT = [
+  {
+    key: /console/i,
+    name: 'console',
+    type: 'plain',
+  },
+  {
+    key: /gamer tag/i,
+    name: 'gamerTag',
+    type: 'plain',
+  },
+];
+
+function parseTTSignup(message) {
+  const text = message.content;
+
+  const data = {
+    authorId: null,
+    authorTag: null,
+    console: null,
+    gamerTag: null,
+    errors: [],
+  };
+
+  const { author } = message;
+  data.authorTag = author.tag;
+  data.authorId = author.id;
+
+  const rows = text.split('\n');
+
+  let value;
+  const result = rows.every((row, i) => {
+    switch (i) {
+      case 0:
+        value = getRowValue(row, /console/i);
+        if (!['PS4', 'Xbox', 'Switch'].includes(value)) return false;
+        data.console = value;
+        break;
+      case 1:
+        value = getRowValue(row, /gamer tag/i);
+        if (!value) return false;
+        data.gamerTag = value;
+        break;
+      default:
+        return false;
+    }
+
+    return true;
+  });
+
+  if (!result) {
+    data.errors.push('result false');
+  }
+
+  console.log(data);
+
+  return data;
+}
+
+parseTTSignup.prototype.fields = fieldsTT;
+parseTTSignup.prototype.template = `Console: PS4 / Xbox / Switch
+Gamer Tag: ctr_tourney_bot / ctr_tourney_bot / SW-1234-5678-9012`;
+module.exports.parseTTSignup = parseTTSignup;
 
 // todo split into files
 const fieldsFFA = [

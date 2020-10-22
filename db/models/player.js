@@ -2,18 +2,18 @@ const mongoose = require('mongoose');
 
 const { Schema, model } = mongoose;
 
-const Clan = new Schema({
+const Player = new Schema({
   discordId: String,
-  flag: String,
   psn: String,
-  character: String,
-  track: String,
-  nat: String,
+  flag: String,
+  languages: [String],
+  birthday: String,
   discordVc: Boolean,
   ps4Vc: Boolean,
+  nat: String,
+  timeZone: String,
   favCharacter: String,
   favTrack: String,
-  birthday: String,
 });
 
-module.exports = model('players', Clan);
+module.exports = model('players', Player);

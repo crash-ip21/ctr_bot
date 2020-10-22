@@ -6,6 +6,7 @@ const _2v2 = require('./2v2.js');
 const _3v3 = require('./3v3.js');
 const _4v4 = require('./4v4.js');
 const wc = require('./wc.js');
+const tt = require('./tt.js');
 
 function getUserFromMention(client, mention) {
   if (!mention) return null;
@@ -35,12 +36,28 @@ function getRowValue(row, key = []) {
 
 module.exports.getRowValue = getRowValue;
 
-// todo better repetition check for PSNs (PSN1, PSN2, ...)
-function checkRepetitions(message, data, fields, parse) {
+async function checkRepetitions(message, data, fields, parseCallback) {
   const { channel } = message;
+  const nicknames = [];
+  const errors = [];
+
+  fields.forEach((field) => {
+    if (field.type === 'nickname') {
+      const nickname = data[field.name];
+      if (nicknames.includes(nickname)) {
+        errors.push(`Repeating nickname: ${nickname}`);
+      } else {
+        nicknames.push(nickname);
+      }
+    }
+  });
+
+  if (errors.length) {
+    return { errors };
+  }
+
   return fetchMessages(channel, 500).then((messages) => {
     messages.pop(); // remove (first template message)
-    const errors = [];
     let result = true;
     messages.forEach((m) => {
       if (m.id === message.id) {
@@ -51,14 +68,24 @@ function checkRepetitions(message, data, fields, parse) {
         return;
       }
 
-      const tmpData = parse(m, false);
+      const tmpData = parseCallback(m);
       fields.forEach((field) => {
-        if (field.type === 'boolean') return;
-        if (field.type === 'flag') return;
+        if (['boolean', 'flag', 'console'].includes(field.type)) return;
         let key = field.name;
         if (field.type === 'mention') {
           key = `${key}Id`;
         }
+
+        if (field.type === 'nickname') {
+          const nickname = data[field.name];
+          if (nicknames.includes(nickname)) {
+            errors.push(`Repeating nickname: ${nickname}`);
+            result = false;
+            return;
+          }
+          nicknames.push(nickname);
+        }
+
         const dataValue = data[key];
         if (dataValue) {
           const tmpDataValue = tmpData[key];
@@ -73,13 +100,13 @@ function checkRepetitions(message, data, fields, parse) {
     if (!result) {
       return { errors };
     }
-    return result;
+    return data;
   });
 }
 
 module.exports.checkRepetitions = checkRepetitions;
 
-module.exports.parse = (message, fields) => {
+function parse(message, fields) {
   const text = message.content;
 
   const data = {
@@ -118,6 +145,7 @@ module.exports.parse = (message, fields) => {
 
       switch (field.type) {
         case 'plain':
+        case 'nickname':
           data[field.name] = value;
           return true;
         case 'mention':
@@ -129,6 +157,10 @@ module.exports.parse = (message, fields) => {
         case 'boolean':
           if (!['yes', 'no'].includes(value.toLowerCase())) return false;
           data[field.name] = value.toLowerCase() === 'yes';
+          return true;
+        case 'console':
+          if (!['PS4', 'Xbox', 'Switch'].includes(value)) return false;
+          data.console = value;
           return true;
         case 'flag': // unique for WC
           if (!message.client.flags.includes(value)) {
@@ -147,9 +179,12 @@ module.exports.parse = (message, fields) => {
     data.errors.push('result false');
   }
 
+  const mentions = [];
+
   const checkRequired = fields.every((field) => {
     if (field.optional) return true;
     if (field.type === 'mention') {
+      mentions.push(data[`${field.name}Id`]);
       return data[`${field.name}Id`] && data[`${field.name}Tag`];
     }
     if (field.type === 'boolean') {
@@ -166,30 +201,12 @@ module.exports.parse = (message, fields) => {
     data.errors.push('both vc are false');
   }
 
-  //   if (![data.discordId1, data.discordId2].includes(data.authorId)) {
-  //     data.errors.push('author didn\'t mention himself');
-  //   } // todo
-
-  // todo check unique
-
   // console.log(data);
 
   return data;
-};
+}
 
-module.exports.parseAndCheckUnique = (message, data, parse, fields) => {
-  if (!fields) {
-    return new Promise(((resolve) => resolve(data)));
-  }
-
-  return checkRepetitions(message, data, fields, parse)
-    .then((r) => {
-      if (r === true) {
-        return data;
-      }
-      return r;
-    });
-};
+module.exports.parse = parse;
 
 module.exports.parsers = {
   FFA: ffa,
@@ -197,4 +214,5 @@ module.exports.parsers = {
   '3v3': _3v3,
   '4v4': _4v4,
   WC: wc,
+  TT: tt,
 };

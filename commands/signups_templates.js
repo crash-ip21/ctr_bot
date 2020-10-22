@@ -9,7 +9,7 @@ module.exports = {
   aliases: ['signups_template', 'signup_templates', 'signup_template'],
   execute(message, args) {
     const parserNames = Object.keys(parsers);
-    const parsersString = parserNames.map((parser, i) => `${i} - ${parser}`).join('\n');
+    const parsersString = parserNames.map((parser, i) => `${i + 1} - ${parser}`).join('\n');
 
     message.channel.send(`Select the type of signups parser:\n${parsersString}`)
       .then(async (confirmMessage) => {
@@ -22,7 +22,7 @@ module.exports = {
             const { content } = collectedMessage;
             collectedMessage.delete();
 
-            const parserName = parserNames[content];
+            const parserName = parserNames[+content - 1];
             if (!parserName) {
               throw new Error('cancel');
             }

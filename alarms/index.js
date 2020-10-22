@@ -3,6 +3,7 @@ const sendLogMessage = require('../utils/sendLogMessage');
 const Schedule = require('../db/models/scheduled_messages');
 const SignupsChannel = require('../db/models/signups_channels');
 const { parsers } = require('../utils/SignupParsers');
+const getSignupsData = require('../utils/getSignupsData');
 
 /* eslint-disable no-unused-vars,no-console */
 const timer = (client, targetDate, callback) => {
@@ -59,7 +60,18 @@ const closeSignups = (client, doc) => {
   channel.send('Signups are now closed!').catch(console.error);
   channel.createOverwrite(channel.guild.roles.everyone, { SEND_MESSAGES: false }).then(() => {
     sendLogMessage(guild, `Changed permission in channel${channel} for everyone SEND_MESSAGES: false`);
-  }).catch(console.error);
+  }).catch(console.error)
+    .then(async () => {
+      const data = await getSignupsData(channel, doc);
+      const txt = data.rows.join('\n');
+      sendLogMessage(guild, {
+        content: `${data.count} signups\n${data.hosts} hosts`,
+        files: [{
+          attachment: Buffer.from(txt, 'utf-8'),
+          name: 'signups.csv',
+        }],
+      });
+    });
 };
 
 const sendScheduledMessage = (client, scheduledMessage) => {
@@ -78,10 +90,10 @@ const sendScheduledMessage = (client, scheduledMessage) => {
 };
 
 const areDatesEqualsToMinutes = (date, now) => date.getUTCFullYear() === now.getUTCFullYear()
-    && date.getUTCMonth() === now.getUTCMonth()
-    && date.getUTCDate() === now.getUTCDate()
-    && date.getUTCHours() === now.getUTCHours()
-    && date.getUTCMinutes() === now.getUTCMinutes();
+  && date.getUTCMonth() === now.getUTCMonth()
+  && date.getUTCDate() === now.getUTCDate()
+  && date.getUTCHours() === now.getUTCHours()
+  && date.getUTCMinutes() === now.getUTCMinutes();
 
 // scheduled messages
 const scheduler = async (client) => {

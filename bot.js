@@ -14,7 +14,7 @@ const db = require('./db');
 const Command = require('./db/models/command');
 const Config = require('./db/models/config');
 const sendLogMessage = require('./utils/sendLogMessage');
-const { parsers, parse, parseAndCheckUnique } = require('./utils/SignupParsers');
+const { parsers, parse, checkRepetitions } = require('./utils/SignupParsers');
 const { flags } = require('./utils/flags');
 const Mute = require('./db/models/mutes');
 const SignupsChannel = require('./db/models/signups_channels');
@@ -177,7 +177,7 @@ async function reactOnSignUp(message, oldMessage = null) {
       message.author.send(`Your signup is wrong. Please, be sure to follow the template (pinned message)!
 You can edit your message, and I will check it again.`).then((m) => DMCallback(m, data)).catch(DMCatchCallback);
     } else {
-      parseAndCheckUnique(message, data, (m) => parse(m, parser.fields), parser.fields) // todo smth about it
+      checkRepetitions(message, data, parser.fields, (m) => parse(m, parser.fields))
         .then((result) => {
           if (result && result.errors && !result.errors.length) {
             message.react('✅').then().catch(reactionCatchCallback);

@@ -13,22 +13,22 @@ module.exports = {
     {
       key: /psn ?1/i,
       name: 'psn1',
-      type: 'plain',
+      type: 'nickname',
     },
     {
       key: /psn ?2/i,
       name: 'psn2',
-      type: 'plain',
+      type: 'nickname',
     },
     {
       key: /psn ?3/i,
       name: 'psn3',
-      type: 'plain',
+      type: 'nickname',
     },
     {
       key: /psn ?sub ?1/i,
       name: 'psnSub1',
-      type: 'plain',
+      type: 'nickname',
       optional: true,
     },
   ],

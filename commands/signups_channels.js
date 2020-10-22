@@ -174,7 +174,7 @@ ${out}`);
     }
 
     const parserNames = Object.keys(parsers);
-    const parsersString = parserNames.map((parser, i) => `${i} - ${parser}`).join('\n');
+    const parsersString = parserNames.map((parser, i) => `${i + 1} - ${parser}`).join('\n');
 
     /* eslint-disable no-case-declarations */
     // eslint-disable-next-line default-case
@@ -215,7 +215,7 @@ ${parsersString}`)
                       const { content } = collectedMessage;
                       collectedMessage.delete();
 
-                      const parser = parserNames[content];
+                      const parser = parserNames[+content - 1];
                       if (!parser) {
                         throw new Error('cancel');
                       }
@@ -301,7 +301,7 @@ ${parsersString}`)
                         const { content } = collectedMessage;
                         collectedMessage.delete();
 
-                        const parser = parserNames[content];
+                        const parser = parserNames[+content - 1];
                         if (!parser) {
                           throw new Error('cancel');
                         }

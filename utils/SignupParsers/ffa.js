@@ -3,7 +3,7 @@ module.exports = {
     {
       key: /psn/i,
       name: 'psn',
-      type: 'plain',
+      type: 'nickname',
     },
     {
       key: /host/i,

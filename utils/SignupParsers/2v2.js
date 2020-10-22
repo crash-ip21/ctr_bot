@@ -6,24 +6,19 @@ module.exports = {
       type: 'plain',
     },
     {
+      key: /captain/i,
+      name: 'discordCaptain',
+      type: 'mention',
+    },
+    {
       key: /psn ?1/i,
       name: 'psn1',
-      type: 'plain',
+      type: 'nickname',
     },
     {
       key: /psn ?2/i,
       name: 'psn2',
-      type: 'plain',
-    },
-    {
-      key: /discord ?1/i,
-      name: 'discord1',
-      type: 'mention',
-    },
-    {
-      key: /discord ?2/i,
-      name: 'discord2',
-      type: 'mention',
+      type: 'nickname',
     },
     {
       key: /host/i,
@@ -32,9 +27,8 @@ module.exports = {
     },
   ],
   template: `Team Name: Template Team
+Captain: <@635410532786110464>
 PSN 1: ctr_tourney_bot
 PSN 2: ctr_tourney_bot_2
-Discord 1: <@635410532786110464>
-Discord 2: <@635410532786110464>
 Host: yes`,
 };

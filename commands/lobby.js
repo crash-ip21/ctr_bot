@@ -439,7 +439,7 @@ function startLobby(docId) {
                   },
                 ];
 
-                const modes = await rngModeBattle();
+                const modes = await rngModeBattle(maps.split('\n'));
 
                 if (doc.isBattle()) {
                   fields.push({

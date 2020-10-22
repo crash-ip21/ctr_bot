@@ -1,5 +1,7 @@
 const Player = require('../db/models/player');
 const Rank = require('../db/models/rank');
+const calculateSuperScore = require('../utils/calculateSuperScore');
+
 const {
   _4V4, BATTLE, DUOS, ITEMLESS, ITEMS,
 } = require('../db/models/ranked_lobbies');
@@ -25,6 +27,12 @@ function sendMessage(message, rank) {
       value,
       inline: true,
     });
+  });
+
+  fields.push({
+    name: 'Super Score',
+    value: calculateSuperScore(rank),
+    inline: true,
   });
 
   message.channel.send({

@@ -2,6 +2,7 @@ const moment = require('moment');
 const Clan = require('../db/models/clans');
 const Player = require('../db/models/player');
 const Rank = require('../db/models/rank');
+const calculateSuperScore = require('../utils/calculateSuperScore');
 
 const {
   _4V4, BATTLE, DUOS, ITEMLESS, ITEMS,
@@ -121,7 +122,7 @@ module.exports = {
   usage: '@user',
   description: 'Check a player profile.',
   guildOnly: true,
-  aliases: ['p', 'rank'],
+  aliases: ['p'],
   execute(message, args) {
     let user = message.author;
 
@@ -139,25 +140,31 @@ module.exports = {
     Player.findOne({ discordId: user.id }).then((player) => {
       Clan.find().then((clans) => {
         /* Profile */
-        let voiceChat = [];
         let psn;
         let flag;
+        let languages = [];
+        let birthday;
+        let voiceChat = [];
         let nat;
+        let timeZone;
         let favCharacter;
         let favTrack;
-        let birthday;
 
         if (!player) {
           psn = '-';
           flag = '-';
+          languages = ['-'];
+          birthday = '-';
           nat = '-';
+          timeZone = '-';
           favCharacter = '-';
           favTrack = '-';
-          birthday = '-';
         } else {
           psn = player.psn || '-';
           flag = player.flag || '-';
+          languages = player.languages || ['-'];
           nat = player.nat || '-';
+          timeZone = player.timeZone || '-';
           favCharacter = player.favCharacter || '-';
           favTrack = player.favTrack || '-';
 
@@ -177,6 +184,10 @@ module.exports = {
           }
         }
 
+        if (languages.length < 1) {
+          languages.push('-');
+        }
+
         if (voiceChat.length < 1) {
           voiceChat = ['-'];
         }
@@ -184,9 +195,11 @@ module.exports = {
         const profile = [
           `**PSN**: ${psn}`,
           `**Country**: ${flag}`,
+          `**Languages**: ${languages.join(', ')}`,
           `**Birthday**: ${birthday}`,
           `**Voice Chat**: ${voiceChat.join(', ')}`,
           `**NAT Type**: ${nat}`,
+          `**Time Zone**: ${timeZone}`,
           `**Joined**: ${guildMember.joinedAt.toLocaleString('default', { month: 'short' })} ${guildMember.joinedAt.getDate()}, ${guildMember.joinedAt.getFullYear()}`,
           `**Registered**: ${guildMember.user.createdAt.toLocaleString('default', { month: 'short' })} ${guildMember.user.createdAt.getDate()}, ${guildMember.user.createdAt.getFullYear()}`,
         ];
@@ -245,6 +258,7 @@ module.exports = {
               '**Duos**: -',
               '**Battle**: -',
               '**4 vs. 4**: -',
+              '**Super Score**: -',
             ];
           } else {
             const itemsRanking = getRankingPosition(rank, ranks[ITEMS]);
@@ -259,6 +273,7 @@ module.exports = {
               `**Duos**: ${duosRanking !== '-' ? `#${duosRanking} - ${getRankingRating(rank, ranks[DUOS])}` : '-'}`,
               `**Battle**: ${battleRanking !== '-' ? `#${battleRanking} - ${getRankingRating(rank, ranks[BATTLE])}` : '-'}`,
               `**4 vs. 4**: ${_4v4Ranking !== '-' ? `#${_4v4Ranking} - ${getRankingRating(rank, ranks[_4V4])}` : '-'}`,
+              `**Super Score**: ${calculateSuperScore(rank)}`,
             ];
           }
 
@@ -310,6 +325,10 @@ module.exports = {
             achievements.push('Member for over 1 year');
           }
 
+          if (player.psn && player.flag && player.nat && player.timeZone && player.birthday && (player.discordVc || player.ps4Vc) && player.favCharacter && player.favCharacter) {
+            achievements.push('Complete Profile');
+          }
+
           const achievementCount = achievements.length;
           if (achievementCount < 1) {
             achievements.push('None');
@@ -347,9 +366,11 @@ module.exports = {
           const commands = [
             '`!set_psn`',
             '`!set_country`',
+            '`!set_languages`',
             '`!set_birthday`',
-            '`!set_nat`',
             '`!set_voice_chat`',
+            '`!set_nat`',
+            '`!set_time_zone`',
             '`!set_character`',
             '`!set_track`',
           ];

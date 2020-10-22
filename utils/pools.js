@@ -93,6 +93,7 @@ module.exports._4v4Pools = [
     'Android Alley',
     'Assembly Lane',
     'Electron Avenue',
+    'Spyro Circuit',
   ],
   [
     'Polar Pass',

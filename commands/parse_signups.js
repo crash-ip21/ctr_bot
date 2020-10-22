@@ -1,18 +1,14 @@
 const fetchMessages = require('../utils/fetchMessages');
-const { parseWCSignup } = require('../utils/SignupsParser');
+const SignupsChannel = require('../db/models/signups_channels');
+const { parse } = require('../utils/SignupParsers');
+const { parsers } = require('../utils/SignupParsers');
 
 module.exports = {
   name: 'parse_signups',
   description: 'Parsing signups',
   guildOnly: true,
   permissions: ['MANAGE_CHANNELS', 'MANAGE_ROLES'],
-  execute(message, args, guild = null) {
-    function getRowValue(row, key = []) {
-      row = row.replace(key, '').trim(); // eslint-disable-line no-param-reassign
-      row = row.replace(/\(.+?\)/, '').trim(); // eslint-disable-line no-param-reassign
-      return row.split(/[:;]/).pop().trim();
-    }
-
+  async execute(message, args, guild = null) {
     let server;
     if (guild) {
       server = guild;
@@ -30,6 +26,14 @@ module.exports = {
     } else {
       const channelName = args[0];
       channel = server.channels.cache.find((c) => c.name === channelName);
+    }
+
+    let parser;
+    const doc = await SignupsChannel.findOne({ guild: message.guild.id, channel: channel.id });
+    if (doc) {
+      parser = parsers[doc.parser];
+    } else {
+      return message.channel.send('This channel is not defined as signups channel. Use `!signups_channels` command.');
     }
 
     const SEPARATOR = ',';
@@ -59,12 +63,8 @@ module.exports = {
 
         count += 1;
 
-        let data;
-        if (channel.name === 'world-cup-signups') {
-          data = parseWCSignup(m);
-        } else {
-          data = message.client.parseSignup(m);
-        }
+        const data = parse(m, parser.fields);
+
         if (data.host) hosts += 1;
 
         data.valid = !data.errors.length;
